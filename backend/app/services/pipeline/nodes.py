@@ -406,7 +406,8 @@ async def node_generate_html(state: PipelineState) -> PipelineState:
 async def node_save_image(state: PipelineState) -> PipelineState:
     """Node 7: HTML → PNG 이미지 저장 (Playwright)"""
     async def _execute(state: PipelineState) -> PipelineState:
-        from app.api.routes.image_render import render_html_to_png, upload_to_gcs
+        from app.core.html_renderer import render_html_to_png
+        from app.core.storage import upload_to_gcs   
         import uuid as _uuid
         from app.db.base import SessionLocal
         from app.models.caption_system import AdCopyHistory
@@ -416,10 +417,12 @@ async def node_save_image(state: PipelineState) -> PipelineState:
 
         # GCS 업로드
         filename = f"ad_minimal_{_uuid.uuid4()}.png"
+        destination_path = f"{state['user_id']}/ads/{filename}"
+
         image_url = upload_to_gcs(
-            image_bytes=image_bytes,
-            filename=filename,
-            user_id=state["user_id"]
+            file_data=image_bytes,
+            destination_path=destination_path,
+            content_type='image/png'
         )
 
         state["final_image_url"] = image_url

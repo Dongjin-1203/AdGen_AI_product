@@ -25,7 +25,12 @@ class ReplicateVTONService:
         if not settings.REPLICATE_API_TOKEN:
             raise ValueError("REPLICATE_API_TOKEN not found in settings")
         
+        # ⭐ Client 인스턴스 생성 (핵심 수정!)
+        self.client = replicate.Client(api_token=settings.REPLICATE_API_TOKEN)
         self.api_token = settings.REPLICATE_API_TOKEN
+        
+        logger.info(f"🔑 Replicate Client initialized")
+        logger.info(f"   Token: {self.api_token[:10] if self.api_token else 'None'}...")
         
         # GCS 버킷 이름 (fallback 포함)
         bucket_name = settings.GCS_BUCKET_NAME or "adgen-ai-storage"
@@ -58,18 +63,7 @@ class ReplicateVTONService:
         model_index: Optional[int] = None,
         user_prompt: Optional[str] = None
     ) -> Image.Image:
-        """
-        패션 광고 이미지 생성 (VTON)
-        
-        Args:
-            garment_image: 의류 이미지 (PIL Image)
-            style: 스타일 (resort/retro/romantic)
-            model_index: K-Fashion 모델 인덱스 (0-9, None이면 랜덤)
-            user_prompt: 추가 요청사항 (현재 미사용)
-        
-        Returns:
-            생성된 광고 이미지 (PIL Image)
-        """
+        """패션 광고 이미지 생성 (VTON) """
         temp_garment_url = None
         
         try:
@@ -125,7 +119,8 @@ class ReplicateVTONService:
             logger.info(f"      - steps: 30")
             logger.info(f"      - seed: 42")
             
-            output = replicate.run(
+            # ⭐ self.client.run 사용 (핵심 수정!)
+            output = self.client.run(
                 "cuuupid/idm-vton:c871bb9b046607b680449ecbae55fd8c6d945e0a1948644bf2361b3d021d3ff4",
                 input={
                     "garm_img": temp_garment_url,
@@ -170,16 +165,7 @@ class ReplicateVTONService:
                 logger.info(f"[VTON] Temp file created: {temp_garment_url}")
     
     def _get_model_image(self, style: str, model_index: Optional[int] = None) -> str:
-        """
-        스타일에 맞는 K-Fashion 모델 이미지 가져오기
-        
-        Args:
-            style: 'resort', 'retro', 'romantic'
-            model_index: 0-9 사이의 인덱스 (None이면 랜덤)
-        
-        Returns:
-            GCS 모델 이미지 URL
-        """
+        """스타일에 맞는 K-Fashion 모델 이미지 가져오기"""
         logger.info(f"   [_get_model_image] Input: style={style}, model_index={model_index}")
         
         # 스타일 검증

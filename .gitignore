@@ -211,3 +211,7 @@ __marimo__/
 
 node_modules/
 *.next/
+
+backend/adgen-ai-deploy-66686fad93e1.json
+
+*.png

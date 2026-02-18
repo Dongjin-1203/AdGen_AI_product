@@ -43,9 +43,6 @@ class Settings(BaseSettings):
     GPU_SERVER_TIMEOUT: int = 120  # 초 단위
     USE_GPU_SERVER: bool = True  # ← 추가: GPU 서버 사용 여부
 
-    # ===== Replicate API =====
-    REPLICATE_API_TOKEN: Optional[str] = None
-
     # ===== CORS ===== 
     ALLOWED_ORIGINS: str = '["http://localhost:3000"]'
     

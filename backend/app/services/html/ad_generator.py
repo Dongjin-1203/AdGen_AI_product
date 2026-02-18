@@ -1,6 +1,6 @@
 """
 광고 카피 생성 서비스
-GPT-4를 사용하여 인스타그램 광고 카피를 생성하고 HTML 템플릿과 결합
+GPT-5를 사용하여 인스타그램 광고 카피를 생성하고 HTML 템플릿과 결합
 """
 import os
 import json
@@ -9,19 +9,40 @@ from openai import OpenAI
 from datetime import datetime
 
 from app.templates.ad_templates import AD_TEMPLATES
-from app.services.template_selector import select_template
+from config import settings  # ⭐ 추가!
 
+def select_template(style_tags: list) -> str:
+    """스타일 태그 기반 템플릿 선택"""
+    # 스타일 태그를 소문자로 변환
+    tags_lower = [tag.lower() if isinstance(tag, str) else "" for tag in style_tags]
+    
+    # bold 템플릿 키워드
+    bold_keywords = ['대담한', '강렬한', '임팩트', '세일', '할인', 'bold', 'strong']
+    if any(keyword in tag for tag in tags_lower for keyword in bold_keywords):
+        return 'bold'
+    
+    # vintage 템플릿 키워드
+    vintage_keywords = ['빈티지', '레트로', '클래식', '앤티크', '옛날', 'vintage', 'retro']
+    if any(keyword in tag for tag in tags_lower for keyword in vintage_keywords):
+        return 'vintage'
+    
+    # 기본: minimal
+    return 'minimal'
 
 class AdGenerator:
     """광고 카피 생성 및 HTML 생성"""
     
     def __init__(self):
         """OpenAI 클라이언트 초기화"""
+        # ⭐ config.settings에서 API 키 가져오기
+        if not settings.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY not found in settings")
+        
         self.client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            timeout=30.0  # ✨ 30초 타임아웃
+            api_key=settings.OPENAI_API_KEY,  # ⭐ os.getenv 대신 settings 사용
+            timeout=30.0
         )
-        self.model = "gpt-4o"  # gpt-4o 유지
+        self.model = "gpt-5-chat-latest"  # ✅ GPT-5 최신 모델!
     
     def _build_prompt(
         self, 
