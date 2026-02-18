@@ -38,7 +38,7 @@ from app.services.img_processing.background_removal import BackgroundRemovalServ
 # ⭐ Few-shot Learning import
 from app.services.fewshot_vision import EnhancedVisionAnalyzer, FewShotVisionAnalyzer
 
-router = APIRouter(prefix="/api/contents", tags=["Contents"])
+router = APIRouter()
 
 # 허용된 이미지 확장자
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}

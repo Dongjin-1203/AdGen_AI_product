@@ -16,7 +16,7 @@ from app.db.base import get_db
 from app.models.schemas import GenerationHistory, UserContent, User
 from app.api.routes.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1", tags=["History"])
+router = APIRouter()
 
 
 # ===== Response Schema =====
