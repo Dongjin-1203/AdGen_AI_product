@@ -52,13 +52,6 @@ export default function Navbar() {
             >
               📋 광고 히스토리
             </Link>
-            {/* 🆕 파이프라인 메뉴 추가 */}
-            <Link
-              href="/pipeline/run"
-              className="text-gray-700 hover:text-blue-600 font-medium transition"
-            >
-              🚀 파이프라인
-            </Link>
             
             {user && (
               <div className="flex items-center gap-4 pl-4 border-l border-gray-300">

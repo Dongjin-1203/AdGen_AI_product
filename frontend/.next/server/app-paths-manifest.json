@@ -1,10 +1,7 @@
 {
-  "/login/page": "app/login/page.js",
-  "/signup/page": "app/signup/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/pipeline/run/page": "app/pipeline/run/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/ad-history/page": "app/ad-history/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/history/page": "app/history/page.js",
-  "/gallery/page": "app/gallery/page.js",
-  "/upload/page": "app/upload/page.js"
+  "/gallery/page": "app/gallery/page.js"
 }
