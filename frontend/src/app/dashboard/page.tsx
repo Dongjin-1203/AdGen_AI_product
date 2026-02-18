@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { token, user } = useAuthStore();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false);
 
   // 상태 관리
   const [steps, setSteps] = useState<StepData[]>([]);
@@ -71,23 +72,34 @@ export default function DashboardPage() {
   const [finalImageUrl, setFinalImageUrl] = useState<string>('');
   const [isRendering, setIsRendering] = useState(false);
 
+  // WebSocket 상태 관련
+  const [jobId, setJobId] = useState<string>('');
+  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+
   // ===== 초기화 =====
   useEffect(() => {
+    console.log('🔄 useEffect 실행됨');
+    
     if (!token) {
       router.push('/login');
       return;
     }
     
-    addStep({
-      id: 'select-image',
-      title: '1️⃣ 이미지 선택',
-      status: 'processing',
-      content: null,
-      timestamp: new Date(),
-    });
-
-    fetchContents();
-  }, [token]);
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      
+      console.log('✅ 초기 단계 추가');
+      addStep({
+        id: 'select-image',
+        title: '1️⃣ 이미지 선택',
+        status: 'processing',
+        content: null,
+        timestamp: new Date(),
+      });
+      
+      fetchContents();
+    }
+  }, []);
 
   // ===== 자동 스크롤 =====
   useEffect(() => {
@@ -100,6 +112,16 @@ export default function DashboardPage() {
       }, 100);
     }
   }, [steps]);
+
+  // WebSocket cleanup
+  useEffect(() => {
+    return () => {
+      if (wsConnection) {
+        wsConnection.close();
+        setWsConnection(null);
+      }
+    };
+  }, [wsConnection]);
 
   // ===== Helper Functions =====
   const addStep = (step: StepData) => {
@@ -116,7 +138,7 @@ export default function DashboardPage() {
 
   const fetchContents = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/contents`, {
+      const response = await fetch(`${API_URL}/api/v1`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (response.ok) {
@@ -199,6 +221,219 @@ export default function DashboardPage() {
     }, 300);
   };
 
+  // WebSocket 연결 함수
+  const connectWebSocket = (jobId: string) => {
+    const wsUrl = API_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+    const ws = new WebSocket(`${wsUrl}/api/v1/ws/pipeline/${jobId}`);
+  
+    ws.onopen = () => {
+      console.log('WebSocket 연결 성공');
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'ping') return; // Ping 메시지는 무시
+
+      console.log('WebSocket 메시지 수신:', data);
+
+      // 각 단계 상태 업데이트
+      handleWebSocketUpdate(data);
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket 에러:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('🔌 WebSocket 연결 종료');
+    };
+
+    setWsConnection(ws);
+  };
+
+  // ===== 완성된 handleWebSocketUpdate 함수 (237줄부터 전체 교체) =====
+
+const handleWebSocketUpdate = (data: any) => {
+  const { status, current_step, steps: pipelineSteps, final_image_url, error } = data;
+
+  // 진행률 업데이트
+  const progressValue = (current_step / 7) * 60 + 40; // 40%부터 시작 (이미지/스타일 선택 완료)
+  setProgress(Math.min(progressValue, 100));
+
+  // 에러 처리
+  if (status === 'failed') {
+    updateStep('generate', {
+      status: 'error',
+      content: (
+        <div className="text-red-600 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="font-semibold">❌ 오류 발생</p>
+          <p className="text-sm mt-2">{error}</p>
+        </div>
+      ),
+    });
+    return;
+  }
+
+  // Step 3 완료: VTON 결과
+  if (pipelineSteps?.virtual_fitting?.status === 'success') {
+    const resultUrl = pipelineSteps.virtual_fitting.result_url;
+    setGeneratedResult(resultUrl);
+    
+    updateStep('generate', {
+      status: 'completed',
+      content: (
+        <div className="space-y-4">
+          <div className="relative w-full aspect-square max-w-2xl mx-auto">
+            <Image
+              src={resultUrl}
+              alt="Generated Model"
+              fill
+              className="object-contain rounded-lg shadow-xl"
+            />
+          </div>
+          <div className="text-center text-sm text-gray-600">
+            <p>✅ AI 모델 착용 완료</p>
+            <p className="text-xs text-gray-500 mt-1">배경 생성 중...</p>
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  // Step 4 완료: 배경 생성
+  if (pipelineSteps?.generate_background?.status === 'success') {
+    const bgUrl = pipelineSteps.generate_background.result_url;
+    
+    // "generate" 단계 업데이트
+    updateStep('generate', {
+      status: 'completed',
+      content: (
+        <div className="space-y-4">
+          <div className="relative w-full aspect-square max-w-2xl mx-auto">
+            <Image
+              src={bgUrl}
+              alt="Background Generated"
+              fill
+              className="object-contain rounded-lg shadow-xl"
+            />
+          </div>
+          <div className="text-center text-sm text-gray-600">
+            <p>✅ 배경 생성 완료</p>
+            <p className="text-xs text-gray-500 mt-1">광고 카피 생성 중...</p>
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  // Step 5-6 완료: 캡션 + HTML (조용히 진행)
+  if (pipelineSteps?.generate_caption?.status === 'success') {
+    // 백그라운드에서 처리 중
+    console.log('캡션 생성 완료');
+  }
+
+  if (pipelineSteps?.generate_html?.status === 'success') {
+    // HTML 생성 완료
+    console.log('HTML 생성 완료');
+  }
+
+  // Step 7 완료: 최종 이미지
+  if (status === 'success' && final_image_url) {
+    setFinalImageUrl(final_image_url);
+    setProgress(100);
+    
+    // 최종 결과 단계 추가
+    addStep({
+      id: 'final-result',
+      title: '✅ 광고 생성 완료',
+      status: 'completed',
+      content: (
+        <div className="space-y-6">
+          {/* 완료 메시지 */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-bold text-xl text-green-900">광고 생성 완료!</h4>
+                <p className="text-green-700 text-sm">이미지가 준비되었습니다</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 최종 이미지 */}
+          <div>
+            <h4 className="font-semibold mb-3 text-gray-900">
+              📸 최종 광고 이미지 (1080×1080px)
+            </h4>
+            <div className="border-4 border-gray-200 rounded-lg overflow-hidden shadow-xl">
+              <Image
+                src={final_image_url}
+                alt="Final Ad"
+                width={1080}
+                height={1080}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* 액션 버튼 */}
+          <div className="grid grid-cols-3 gap-3">
+            <a
+              href={final_image_url}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2"
+            >
+              <span>💾</span>
+              <span>다운로드</span>
+            </a>
+            
+            <Link
+              href="/history"
+              className="py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition flex items-center justify-center gap-2"
+            >
+              <span>📜</span>
+              <span>히스토리</span>
+            </Link>
+            
+            <button
+              onClick={handleReset}
+              className="py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+            >
+              <span>🎨</span>
+              <span>새로 만들기</span>
+            </button>
+          </div>
+
+          {/* 정보 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h5 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+              <span>ℹ️</span> 이미지 정보
+            </h5>
+            <div className="text-sm text-blue-800 space-y-1">
+              <p>• 해상도: 1080×1080px (Instagram 최적화)</p>
+              <p>• 형식: PNG (고품질)</p>
+            </div>
+          </div>
+        </div>
+      ),
+      timestamp: new Date(),
+    });
+
+    // WebSocket 연결 해제
+    if (wsConnection) {
+      wsConnection.close();
+      setWsConnection(null);
+    }
+  }
+};
+
   // ===== Step 3: AI 광고 모델 생성 =====
   const handleGenerate = async () => {
     if (!selectedContent || !selectedStyle) return;
@@ -210,106 +445,15 @@ export default function DashboardPage() {
       content: (
         <div className="flex flex-col items-center py-8">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">AI가 패션 모델 이미지를 생성하고 있습니다...</p>
-          <p className="text-sm text-gray-500 mt-2">평균 30-60초 소요됩니다</p>
+          <p className="text-gray-600">AI 파이프라인이 광고를 생성하고 있습니다...</p>
+          <p className="text-sm text-gray-500 mt-2">평균 2-3분 소요됩니다</p>
         </div>
       ),
     });
 
     try {
-      const formData = new FormData();
-      formData.append('content_id', selectedContent.content_id);
-      formData.append('style', selectedStyle);
-      if (userPrompt) {
-        formData.append('prompt', userPrompt);
-      }
-
-      const response = await fetch(`${API_URL}/api/v1/generate-ad-replicate`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setGeneratedResult(data.result_url);
-        setGenerationId(data.history_id);
-        setProgress(60);
-
-        updateStep('generate', {
-          status: 'completed',
-          content: (
-            <div className="space-y-4">
-              <div className="relative w-full aspect-square max-w-2xl mx-auto">
-                <Image
-                  src={data.result_url}
-                  alt="Generated Model Image"
-                  fill
-                  className="object-contain rounded-lg shadow-xl"
-                />
-              </div>
-              <div className="text-center text-sm text-gray-600">
-                ⏱️ 생성 시간: {data.processing_time?.toFixed(2)}초
-              </div>
-            </div>
-          ),
-        });
-
-        // ⭐ Step 4 자동 시작: 캡션 생성
-        setTimeout(() => {
-          addStep({
-            id: 'caption-generate',
-            title: '4️⃣ 광고 캡션 생성',
-            status: 'processing',
-            content: null,
-            timestamp: new Date(),
-          });
-          
-          handleGenerateCaption(data.history_id);
-        }, 500);
-      } else {
-        throw new Error('Generation failed');
-      }
-    } catch (error) {
-      updateStep('generate', {
-        status: 'error',
-        content: (
-          <div className="text-center py-8">
-            <p className="text-red-600 font-semibold mb-4">❌ 생성 실패</p>
-            <p className="text-gray-600 mb-4">
-              {error instanceof Error ? error.message : '알 수 없는 오류'}
-            </p>
-            <button
-              onClick={handleGenerate}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              다시 시도
-            </button>
-          </div>
-        ),
-      });
-    }
-  };
-
-  // ===== 캡션 생성 =====
-  const handleGenerateCaption = async (historyId: string) => {
-    if (!selectedContent) return;
-
-    setProgress(70);
-
-    updateStep('caption-generate', {
-      status: 'processing',
-      content: (
-        <div className="flex flex-col items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-green-600 mb-4"></div>
-          <p className="text-gray-600">GPT가 광고 캡션을 작성하고 있습니다...</p>
-          <p className="text-sm text-gray-500 mt-2">평균 2-3초 소요됩니다</p>
-        </div>
-      ),
-    });
-
-    try {
-      const response = await fetch(`${API_URL}/api/v1/caption`, {
+      // 파이프라인 실행
+      const response = await fetch(`${API_URL}/api/v1/pipeline/run`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -317,347 +461,31 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({
           content_id: selectedContent.content_id,
-          generation_id: historyId,
-          user_request: userPrompt || undefined,
+          style: selectedStyle,
+          user_prompt: userPrompt || undefined,
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setCaptionId(data.caption_id);
-        setAiCaption(data.ai_caption);
-        setFinalCaption(data.ai_caption); // 초기값
-        setProgress(75);
-
-        updateStep('caption-generate', {
-          status: 'completed',
-          content: (
-            <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">✨</span>
-                <h4 className="font-bold text-lg text-gray-900">AI가 생성한 캡션</h4>
-              </div>
-              <p className="text-gray-800 text-lg leading-relaxed">
-                {data.ai_caption}
-              </p>
-            </div>
-          ),
-        });
-
-        // ⭐ Step 5 추가: 캡션 확정
-        setTimeout(() => {
-          addStep({
-            id: 'caption-confirm',
-            title: '5️⃣ 캡션 확정',
-            status: 'processing',
-            content: null,
-            timestamp: new Date(),
-          });
-        }, 500);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Caption generation failed');
-      }
-    } catch (error) {
-      updateStep('caption-generate', {
-        status: 'error',
-        content: (
-          <div className="text-center py-8">
-            <p className="text-red-600 font-semibold mb-4">❌ 캡션 생성 실패</p>
-            <p className="text-gray-600 mb-4">
-              {error instanceof Error ? error.message : '알 수 없는 오류'}
-            </p>
-            <button
-              onClick={() => handleGenerateCaption(historyId)}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              다시 시도
-            </button>
-          </div>
-        ),
-      });
-    }
-  };
-
-  // ===== ⭐ Step 5: 캡션 확정 (NEW) =====
-  const handleConfirmCaption = async (useOriginal: boolean) => {
-    if (!captionId) return;
-
-    setProgress(85);
-
-    const captionToConfirm = useOriginal ? aiCaption : finalCaption;
-
-    try {
-      const response = await fetch(`${API_URL}/api/v1/caption/confirm`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          caption_id: captionId,
-          final_caption: captionToConfirm,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        updateStep('caption-confirm', {
-          status: 'completed',
-          content: (
-            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">✅</span>
-                <h4 className="font-bold text-lg text-gray-900">
-                  {data.is_modified ? '캡션 수정 완료' : '캡션 확정 완료'}
-                </h4>
-              </div>
-              <p className="text-gray-800 text-lg leading-relaxed mb-3">
-                {captionToConfirm}
-              </p>
-              <p className="text-sm text-gray-600">
-                {data.is_modified 
-                  ? '💡 수정된 캡션이 보상 학습 데이터로 저장되었습니다.'
-                  : '🎯 AI 캡션이 그대로 사용됩니다.'}
-              </p>
-            </div>
-          ),
-        });
-
-        // ⭐ Step 6 자동 시작: 최종 광고 생성
-        setTimeout(() => {
-          addStep({
-            id: 'ad-copy',
-            title: '6️⃣ 최종 광고 페이지 생성',
-            status: 'processing',
-            content: null,
-            timestamp: new Date(),
-          });
-          
-          handleGenerateAdCopy();
-        }, 500);
-      } else {
-        throw new Error('Caption confirmation failed');
-      }
-    } catch (error) {
-      updateStep('caption-confirm', {
-        status: 'error',
-        content: (
-          <div className="text-center py-8">
-            <p className="text-red-600 font-semibold mb-4">❌ 캡션 확정 실패</p>
-            <p className="text-gray-600 mb-4">
-              {error instanceof Error ? error.message : '알 수 없는 오류'}
-            </p>
-          </div>
-        ),
-      });
-    }
-  };
-
-  // ===== ⭐ Step 6: 최종 광고 생성 (수정됨: caption_id 사용) =====
-  const handleGenerateAdCopy = async () => {
-    if (!captionId) {
-      alert('캡션을 먼저 확정해주세요.');
-      return;
-    }
-
-    setProgress(80);
-
-    // Step 6: Minimal 템플릿 생성 + 저장
-    addStep({
-      id: 'ad-copy',
-      title: '6️⃣ 광고 템플릿 생성',
-      status: 'processing',
-      content: (
-        <div className="flex flex-col items-center py-8">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mb-4"></div>
-          <p className="text-gray-600">Minimal 템플릿을 생성하고 있습니다...</p>
-          <p className="text-sm text-gray-500 mt-2">평균 2-3초 소요됩니다</p>
-        </div>
-      ),
-      timestamp: new Date()
-    });
-
-    try {
-      // ✨ Minimal 템플릿 생성 (바로 저장됨)
-      const response = await fetch(`${API_URL}/api/v1/ad-copy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          caption_id: captionId,
-          user_request: userPrompt || undefined
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // ✨ 응답 구조 변경: ad_copy_id를 바로 받음
-        const adCopyId = data.ad_copy_id;
-        
-        setProgress(90);
-        console.log(`✅ Minimal 템플릿 생성 완료 (${data.processing_time.toFixed(2)}초)`);
-
-        // Step 6 완료
-        updateStep('ad-copy', {
-          status: 'completed',
-          content: (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-green-600 font-semibold mb-2">
-                  ✅ Minimal 템플릿 생성 완료
-                </p>
-                <p className="text-sm text-gray-600">
-                  ⏱️ 생성 시간: {data.processing_time.toFixed(2)}초
-                </p>
-              </div>
-              
-              {/* Minimal 템플릿 미리보기 */}
-              <div className="border-2 border-purple-200 rounded-lg overflow-hidden">
-                <div className="aspect-square bg-gray-50">
-                  <iframe
-                    srcDoc={data.html_content}
-                    className="w-full h-full pointer-events-none"
-                    title="Minimal Clean"
-                    sandbox="allow-same-origin"
-                  />
-                </div>
-              </div>
-              
-              {/* 광고 카피 정보 */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-100">
-                <h5 className="font-semibold text-gray-900 mb-2">📝 광고 카피</h5>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">헤드라인:</span>
-                    <p className="font-semibold text-gray-900">{data.ad_copy.headline}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">할인:</span>
-                    <p className="font-semibold text-red-600">{data.ad_copy.discount}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">기간:</span>
-                    <p className="text-gray-700">{data.ad_copy.period}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">브랜드:</span>
-                    <p className="text-gray-800">{data.ad_copy.brand}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ),
-        });
-
-        // ✨ /ad-copy/save 호출 제거 - 바로 PNG 생성으로 진행
-        setTimeout(async () => {
-          try {
-            // Step 7: PNG 이미지 생성
-            addStep({
-              id: 'render-image',
-              title: '7️⃣ PNG 이미지 생성',
-              status: 'processing',
-              content: (
-                <div className="flex flex-col items-center py-8">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mb-4"></div>
-                  <p className="text-gray-600">고품질 PNG 이미지를 생성하고 있습니다...</p>
-                  <p className="text-sm text-gray-500 mt-2">평균 2-3초 소요됩니다</p>
-                </div>
-              ),
-              timestamp: new Date()
-            });
-
-            // PNG 이미지 생성
-            const renderResponse = await fetch(`${API_URL}/api/v1/render-image`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                ad_copy_id: adCopyId
-              })
-            });
-
-            if (renderResponse.ok) {
-              const renderData = await renderResponse.json();
-              setFinalImageUrl(renderData.image_url);
-              setProgress(100);
-
-              console.log(`✅ PNG 생성 완료: ${renderData.processing_time.toFixed(2)}초`);
-
-              // Step 7 완료
-              updateStep('render-image', {
-                status: 'completed',
-                content: (
-                  <div className="text-center py-2">
-                    <p className="text-green-600">✅ PNG 생성 완료 ({renderData.processing_time.toFixed(2)}초)</p>
-                  </div>
-                ),
-              });
-
-              // Step 8: 최종 완료
-              setTimeout(() => {
-                addStep({
-                  id: 'final',
-                  title: '✅ 완료',
-                  status: 'completed',
-                  content: (
-                    <FinalImageResult
-                      imageUrl={renderData.image_url}
-                      adCopyId={adCopyId}
-                      onReset={handleReset}
-                    />
-                  ),
-                  timestamp: new Date()
-                });
-              }, 500);
-
-            } else {
-              throw new Error('PNG 생성 실패');
-            }
-
-          } catch (error) {
-            console.error('PNG generation error:', error);
-            updateStep('render-image', {
-              status: 'error',
-              content: (
-                <div className="text-center py-8">
-                  <p className="text-red-600 font-semibold mb-4">❌ PNG 생성 실패</p>
-                  <button
-                    onClick={handleGenerateAdCopy}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    다시 시도
-                  </button>
-                </div>
-              ),
-            });
-          }
-        }, 500);
-
-      } else {
-        throw new Error('템플릿 생성 실패');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '파이프라인 실행 실패');
       }
 
-    } catch (error) {
-      console.error('Ad Copy generation error:', error);
-      updateStep('ad-copy', {
+      const data = await response.json();
+      const { job_id } = data;
+
+      setJobId(job_id);
+
+      // WebSocket 연결
+      connectWebSocket(job_id);
+
+    } catch (err: any) {
+      console.error('Pipeline error:', err);
+      updateStep('generate', {
         status: 'error',
         content: (
-          <div className="text-center py-8">
-            <p className="text-red-600 font-semibold mb-4">❌ 템플릿 생성 실패</p>
-            <button
-              onClick={handleGenerateAdCopy}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              다시 시도
-            </button>
+          <div className="text-red-600 text-center py-4">
+            <p className="font-semibold">{err.message || '파이프라인 실행에 실패했습니다.'}</p>
           </div>
         ),
       });
@@ -665,6 +493,7 @@ export default function DashboardPage() {
   };
 
   const handleReset = () => {
+    setJobId('');
     setSteps([]);
     setProgress(0);
     setSelectedContent(null);
@@ -687,6 +516,11 @@ export default function DashboardPage() {
       content: null,
       timestamp: new Date(),
     });
+
+    if (wsConnection) {
+      wsConnection.close();
+      setWsConnection(null);
+    }
   };
 
   // ===== 렌더링 =====
@@ -740,14 +574,6 @@ export default function DashboardPage() {
                   disabled={!selectedContent || !selectedStyle}
                 />
               ) : null}
-              onCaptionConfirm={step.id === 'caption-confirm' && step.status === 'processing' ? (
-                <CaptionEditor
-                  aiCaption={aiCaption}
-                  finalCaption={finalCaption}
-                  onCaptionChange={setFinalCaption}
-                  onConfirm={handleConfirmCaption}
-                />
-              ) : null}
             />
           ))}
         </div>
@@ -764,14 +590,12 @@ function StepCard({
   onSelectImage,
   onSelectStyle,
   onGenerate,
-  onCaptionConfirm,
 }: {
   step: StepData;
   isLast: boolean;
   onSelectImage?: React.ReactNode;
   onSelectStyle?: React.ReactNode;
   onGenerate?: React.ReactNode;
-  onCaptionConfirm?: React.ReactNode;
 }) {
   return (
     <div
@@ -815,7 +639,6 @@ function StepCard({
       {onSelectImage}
       {onSelectStyle}
       {onGenerate}
-      {onCaptionConfirm}
     </div>
   );
 }

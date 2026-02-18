@@ -72,7 +72,7 @@ export default function UploadPage() {
       if (productName) formData.append('product_name', productName);
       if (price) formData.append('price', price);
 
-      const response = await fetch(`${API_URL}/api/contents/${uploadedContentId}`, {
+      const response = await fetch(`${API_URL}/api/v1/${uploadedContentId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,7 +144,7 @@ export default function UploadPage() {
         console.log('🎯 카테고리 전달:', selectedCategory);
       }
 
-      const response = await fetch(`${API_URL}/api/contents/upload`, {
+      const response = await fetch(`${API_URL}/api/v1/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
