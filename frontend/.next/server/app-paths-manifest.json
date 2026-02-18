@@ -1,0 +1,7 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/ad-history/page": "app/ad-history/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/history/page": "app/history/page.js",
+  "/gallery/page": "app/gallery/page.js"
+}

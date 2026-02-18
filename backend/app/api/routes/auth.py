@@ -20,7 +20,7 @@ from app.core.security import (
     decode_access_token
 )
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
