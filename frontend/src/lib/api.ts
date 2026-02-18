@@ -54,11 +54,11 @@ export const authAPI = {
 };
 
 export const contentAPI = {
-  upload: (formData: FormData) => api.post<Content>('/api/v1/contents/upload', formData),
-  getAll: () => api.get<Content[]>('/api/v1/contents'),
-  getOne: (id: string) => api.get<Content>(`/api/v1/contents/${id}`),
-  update: (id: string, data: any) => api.patch(`/api/v1/contents/${id}`, data),
-  delete: (id: string) => api.delete(`/api/v1/contents/${id}`),
+  upload: (formData: FormData) => api.post<Content>('/api/v1/upload', formData),
+  getAll: () => api.get<Content[]>('/api/v1'),
+  getOne: (id: string) => api.get<Content>(`/api/v1/${id}`),
+  update: (id: string, data: any) => api.patch(`/api/v1/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/${id}`),
 };
 
 export const historyAPI = {
