@@ -1,0 +1,65 @@
+from pydantic_settings import BaseSettings
+from typing import Optional, List
+import os
+import json
+
+class Settings(BaseSettings):
+    # ===== Environment =====
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = False
+    
+    # ===== Database (로컬 개발용) =====
+    DATABASE_URL: Optional[str] = None
+    
+    # ===== Cloud SQL (배포용) =====
+    CLOUD_SQL_CONNECTION_NAME: Optional[str] = None
+    DB_USER: str = "postgres"
+    DB_PASSWORD: Optional[str] = None
+    DB_NAME: str = "adgen_ai"
+    
+    # ===== JWT =====
+    JWT_SECRET_KEY: str = "default-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # ===== GCS =====
+    GCS_BUCKET_NAME: Optional[str] = None
+    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None  
+    
+    # ===== Replicate API =====
+    REPLICATE_API_TOKEN: Optional[str] = None  
+
+    # ===== Google Gemini API ===== 
+    GOOGLE_API_KEY: Optional[str] = None
+    
+    # ===== Google Gemini Image Generation API =====
+    GOOGLE_MODEL_API_KEY: Optional[str] = None  # ← 추가된 부분
+
+    # ===== OpenAI API =====
+    OPENAI_API_KEY: Optional[str] = None
+    
+    # ===== GPU Server (Background Generation) =====
+    GPU_SERVER_URL: str = "http://34.59.198.57:8001"
+    GPU_SERVER_TIMEOUT: int = 120  # 초 단위
+    USE_GPU_SERVER: bool = True  # ← 추가: GPU 서버 사용 여부
+
+    # ===== Replicate API =====
+    REPLICATE_API_TOKEN: Optional[str] = None
+
+    # ===== CORS ===== 
+    ALLOWED_ORIGINS: str = '["http://localhost:3000"]'
+    
+    @property
+    def CLOUD_SQL_URL(self) -> str:
+        """Cloud SQL 또는 로컬 DB URL 반환"""
+        if self.ENVIRONMENT == "production" and self.CLOUD_SQL_CONNECTION_NAME:
+            return f"postgresql+pg8000://{self.DB_USER}:{self.DB_PASSWORD}@/{self.DB_NAME}?unix_sock=/cloudsql/{self.CLOUD_SQL_CONNECTION_NAME}/.s.PGSQL.5432"
+        else:
+            return self.DATABASE_URL or "postgresql://postgres:password@localhost:5432/adgen_ai"
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+        env_file_encoding = 'utf-8'
+
+settings = Settings()

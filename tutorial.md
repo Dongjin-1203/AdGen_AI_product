@@ -1,4 +1,6 @@
-# AdGen_AI_product
+# AdGen Pipeline - AI 광고 생성 파이프라인
+
+> 기존 AdGen AI에서 LangGraph 기반 파이프라인 + 실시간 모니터링으로 리팩토링
 
 ---
 
@@ -118,3 +120,66 @@ CATEGORY_CONFLICT_MAP = {
 ---
 
 ## 초기 세팅
+
+### 1. 레포 클론 후 기존 코드 복사
+
+```bash
+# 기존 AdGen AI에서 복사할 디렉토리
+cp -r old-adgen/backend/app/services/vision/       backend/app/services/vision/
+cp -r old-adgen/backend/app/services/generation/   backend/app/services/generation/
+cp -r old-adgen/backend/app/services/img_processing/ backend/app/services/img_processing/
+cp -r old-adgen/backend/app/services/html/         backend/app/services/html/
+cp -r old-adgen/backend/app/models/                backend/app/models/
+cp -r old-adgen/backend/app/core/                  backend/app/core/
+cp -r old-adgen/backend/app/db/                    backend/app/db/
+cp -r old-adgen/backend/app/templates/             backend/app/templates/
+cp -r old-adgen/backend/app/api/routes/auth.py     backend/app/api/routes/
+cp -r old-adgen/backend/app/api/routes/contents.py backend/app/api/routes/
+cp -r old-adgen/backend/app/api/routes/history.py  backend/app/api/routes/
+cp    old-adgen/backend/config.py                  backend/
+cp    old-adgen/backend/alembic.ini                backend/
+
+# RMBG-2.0 (하위 브랜치에서)
+git checkout feature/rmbg-2.0 -- backend/app/services/img_processing/background_removal.py
+```
+
+### 2. 새로 작성할 파일
+
+```
+backend/app/services/pipeline/state.py      ← PipelineState
+backend/app/services/pipeline/nodes.py      ← 7개 노드
+backend/app/services/pipeline/validators.py ← 충돌 감지
+backend/app/services/pipeline/graph.py      ← LangGraph 그래프
+backend/app/api/routes/pipeline.py          ← 엔드포인트
+backend/app/api/routes/websocket.py         ← WebSocket
+frontend/src/components/pipeline/PipelineMonitor.tsx
+frontend/src/components/pipeline/PipelineNode.tsx
+```
+
+### 3. 의존성 추가
+
+```bash
+# backend/requirements.txt에 추가
+langgraph>=0.2.0
+langchain-core>=0.3.0
+```
+
+```bash
+# frontend
+npm install reactflow
+```
+
+### 4. 환경 변수
+
+기존 `.env.sample` 복사 후 그대로 사용 가능.
+
+---
+
+## 개발 순서 (4일 스프린트)
+
+| Day | 작업 |
+|-----|------|
+| Day 1 (2/17) | `state.py`, `nodes.py`, `validators.py`, `graph.py` 작성 |
+| Day 2 (2/18) | `pipeline.py` 엔드포인트 + `websocket.py` |
+| Day 3 (2/19) | ReactFlow UI (`PipelineMonitor.tsx`) |
+| Day 4 (2/20) | RMBG-2.0 merge + 통합 테스트 |
