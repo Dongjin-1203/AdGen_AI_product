@@ -34,7 +34,8 @@ from app.models import (
 config = context.config
 
 # ===== DATABASE_URL 로드 및 % 이스케이프 =====
-db_url = settings.CLOUD_SQL_URL
+db_url = settings.DATABASE_URL
+print(f"🔧 Alembic DB URL: {db_url[:70] if db_url else 'None'}...")
 # ConfigParser는 % 기호를 interpolation 구문으로 해석하므로 %% 로 변환
 if db_url:
     db_url_escaped = db_url.replace('%', '%%')
