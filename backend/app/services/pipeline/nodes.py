@@ -10,6 +10,7 @@ from typing import Callable, Optional
 
 from app.services.pipeline.state import PipelineState, STEP_NAMES
 from app.services.pipeline.validators import PRE_CHECKS, POST_CHECKS
+from app.utils.style_matcher import auto_match_style
 
 logger = logging.getLogger(__name__)
 
@@ -370,15 +371,34 @@ async def node_generate_html(state: PipelineState) -> PipelineState:
                 "style_tags": style_tags,
             }
 
+            print("=" * 50)
+            print("🔍 스타일 선택 시작")
+            print(f"📦 state.style = {state.get('style')}")
+            print(f"📦 vision_result = {vision_result}")
+
+            if True:
+                selected_style = auto_match_style(
+                    vision_tags=vision_result.get("style_tags", []),
+                    category=vision_result.get("category", "")
+                )
+                print(f"🎨 스타일 자동 선택: {selected_style}")
+            else:
+                selected_style = state["style"]
+                print(f"🎨 사용자 선택 스타일: {selected_style}")
+
+            print(f"✅ 최종 선택 스타일: {selected_style}")
+            print("=" * 50)
+            
             generator = AdGenerator()
             result = generator.generate_html_with_template(
                 vision_result=vision_result,
                 image_url=state["background_image_url"],
-                template_name="minimal",
+                template_name=selected_style,
                 caption=state["caption"],
             )
 
             state["html_content"] = result["html"]
+            state["selected_style"] = selected_style
 
             # AdCopyHistory DB 저장
             ad_copy = AdCopyHistory(
@@ -388,7 +408,7 @@ async def node_generate_html(state: PipelineState) -> PipelineState:
                 caption_id=state["caption_id"],
                 generation_id=state["generation_id"],
                 ad_copy_data=result["ad_copy"],
-                template_used="minimal",
+                template_used=selected_style,
                 html_content=result["html"],
             )
             db.add(ad_copy)

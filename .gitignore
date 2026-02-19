@@ -213,5 +213,6 @@ node_modules/
 *.next/
 
 backend/adgen-ai-deploy-66686fad93e1.json
+backend/adgen-ai-deploy-2773a0ab3f79.json
 
 *.png

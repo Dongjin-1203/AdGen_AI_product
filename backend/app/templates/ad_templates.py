@@ -24,12 +24,12 @@ AD_TEMPLATES = {
             font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
         }
         .background-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 2.5%;
+            left: 2.5%;
         }
         .overlay {
             position: absolute;
@@ -118,12 +118,12 @@ AD_TEMPLATES = {
             font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
         }
         .background-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 2.5%;
+            left: 2.5%;
         }
         .overlay {
             position: absolute;
@@ -201,12 +201,12 @@ AD_TEMPLATES = {
             font-family: Georgia, 'Playfair Display', serif;
         }
         .background-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 2.5%;
+            left: 2.5%;
             filter: sepia(40%) contrast(95%);
         }
         .overlay {
@@ -295,12 +295,12 @@ AD_TEMPLATES = {
             font-family: 'Helvetica Neue', Arial, sans-serif;
         }
         .background-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 2.5%;
+            left: 2.5%;
         }
         .overlay {
             position: absolute;
