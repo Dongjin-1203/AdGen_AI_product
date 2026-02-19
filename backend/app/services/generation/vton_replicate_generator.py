@@ -25,36 +25,64 @@ class ReplicateVTONService:
         if not settings.REPLICATE_API_TOKEN:
             raise ValueError("REPLICATE_API_TOKEN not found in settings")
         
-        # ⭐ Client 인스턴스 생성 (핵심 수정!)
+        # ⭐ Client 인스턴스 생성
         self.client = replicate.Client(api_token=settings.REPLICATE_API_TOKEN)
         self.api_token = settings.REPLICATE_API_TOKEN
         
         logger.info(f"🔑 Replicate Client initialized")
         logger.info(f"   Token: {self.api_token[:10] if self.api_token else 'None'}...")
         
-        # GCS 버킷 이름 (fallback 포함)
+        # GCS 버킷 이름
         bucket_name = settings.GCS_BUCKET_NAME or "adgen-ai-storage"
         
-        # K-Fashion 모델 이미지 URL (스타일별 10개씩) - Public URL 사용
-        self.K_FASHION_MODELS = {
-            'resort': [
-                f"https://storage.googleapis.com/{bucket_name}/k-fashion-models/resort/resort_{i:02d}.jpg"
-                for i in range(10)
-            ],
-            'retro': [
-                f"https://storage.googleapis.com/{bucket_name}/k-fashion-models/retro/retro_{i:02d}.jpg"
-                for i in range(10)
-            ],
-            'romantic': [
-                f"https://storage.googleapis.com/{bucket_name}/k-fashion-models/romantic/romantic_{i:02d}.jpg"
-                for i in range(10)
-            ]
-        }
+        # ⭐ GCS에서 실제 존재하는 모델 이미지 목록 로드
+        logger.info("📁 Loading K-Fashion models from GCS...")
+        self.K_FASHION_MODELS = self._load_models_from_gcs(bucket_name)
         
         logger.info("✅ Replicate VTON Service initialized")
         logger.info(f"   Bucket: {bucket_name}")
         logger.info(f"   Models loaded: {sum(len(v) for v in self.K_FASHION_MODELS.values())} images")
-        logger.info(f"   Sample resort URL: {self.K_FASHION_MODELS['resort'][0]}")
+        if self.K_FASHION_MODELS.get('resort'):
+            logger.info(f"   Sample resort URL: {self.K_FASHION_MODELS['resort'][0]}")
+    
+    def _load_models_from_gcs(self, bucket_name: str) -> dict:
+        """
+        GCS에서 실제 존재하는 모델 이미지 목록 로드
+        
+        Returns:
+            {
+                'resort': ['https://...resort_00.jpg', ...],
+                'retro': [...],
+                'romantic': [...]
+            }
+        """
+        from app.core.storage import get_storage_client
+        
+        client = get_storage_client()
+        bucket = client.bucket(bucket_name)
+        
+        models = {}
+        
+        for style in ['resort', 'retro', 'romantic']:
+            prefix = f"k-fashion-models/{style}/"
+            blobs = list(bucket.list_blobs(prefix=prefix))
+            
+            # .jpg 파일만 필터링 (mask, json 제외)
+            jpg_files = [
+                f"https://storage.googleapis.com/{bucket_name}/{blob.name}"
+                for blob in blobs
+                if blob.name.endswith('.jpg') 
+                and not blob.name.endswith('_mask.jpg')
+                and not blob.name.endswith('.json')
+            ]
+            
+            models[style] = jpg_files
+            logger.info(f"   ✅ {style}: {len(jpg_files)} models loaded")
+        
+        total = sum(len(v) for v in models.values())
+        logger.info(f"📁 Total models loaded: {total} images")
+        
+        return models
     
     def generate_fashion_ad(
         self,
@@ -88,38 +116,20 @@ class ReplicateVTONService:
             )
             logger.info(f"[VTON] Step 1: ✅ Garment uploaded: {temp_garment_url}")
             
-            # URL이 None인지 체크
             if not temp_garment_url:
                 raise ValueError("❌ Garment upload failed: temp_garment_url is None")
             
-            # 2. K-Fashion 모델 선택 (스타일별)
+            # 2. K-Fashion 모델 선택
             logger.info(f"[VTON] Step 2: Selecting K-Fashion model...")
             model_image_url = self._get_model_image(style, model_index)
-            logger.info(f"[VTON] Step 2: Model URL returned: {model_image_url}")
-            
-            # URL이 None인지 체크
-            if not model_image_url:
-                raise ValueError(f"❌ Model URL is None for style={style}, model_index={model_index}")
-            
             logger.info(f"[VTON] Step 2: ✅ Selected model: {model_image_url}")
             
-            # 3. 양쪽 URL 검증
-            logger.info(f"[VTON] Step 3: Validating URLs...")
-            logger.info(f"   [VTON] garm_img type: {type(temp_garment_url)}, value: {temp_garment_url[:100] if temp_garment_url else 'None'}...")
-            logger.info(f"   [VTON] human_img type: {type(model_image_url)}, value: {model_image_url[:100] if model_image_url else 'None'}...")
+            if not model_image_url:
+                raise ValueError(f"❌ Model URL is None for style={style}")
             
-            # 4. Replicate IDM-VTON API 호출
-            logger.info("[VTON] Step 4: Calling Replicate API...")
-            logger.info(f"   [VTON] Model: cuuupid/idm-vton")
-            logger.info(f"   [VTON] Parameters:")
-            logger.info(f"      - garm_img: {temp_garment_url}")
-            logger.info(f"      - human_img: {model_image_url}")
-            logger.info(f"      - garment_des: A {style} style garment")
-            logger.info(f"      - category: upper_body")
-            logger.info(f"      - steps: 30")
-            logger.info(f"      - seed: 42")
+            # 3. Replicate IDM-VTON API 호출
+            logger.info("[VTON] Step 3: Calling Replicate API...")
             
-            # ⭐ self.client.run 사용 (핵심 수정!)
             output = self.client.run(
                 "cuuupid/idm-vton:c871bb9b046607b680449ecbae55fd8c6d945e0a1948644bf2361b3d021d3ff4",
                 input={
@@ -132,9 +142,9 @@ class ReplicateVTONService:
                 }
             )
             
-            logger.info(f"[VTON] Step 4: ✅ API response received: {type(output)}")
+            logger.info(f"[VTON] Step 3: ✅ API response received")
             
-            # 5. 결과 이미지 다운로드
+            # 4. 결과 이미지 다운로드
             if isinstance(output, str):
                 result_url = output
             elif isinstance(output, list) and len(output) > 0:
@@ -142,7 +152,7 @@ class ReplicateVTONService:
             else:
                 raise Exception(f"Unexpected output format: {type(output)}")
             
-            logger.info(f"[VTON] Step 5: Downloading result from: {result_url}")
+            logger.info(f"[VTON] Step 4: Downloading result from: {result_url}")
             
             response = requests.get(result_url, timeout=60)
             response.raise_for_status()
@@ -155,9 +165,7 @@ class ReplicateVTONService:
             return result_image
             
         except Exception as e:
-            logger.error(f"❌ [VTON] Generation failed at some step", exc_info=True)
-            logger.error(f"   [VTON] Error type: {type(e).__name__}")
-            logger.error(f"   [VTON] Error message: {str(e)}")
+            logger.error(f"❌ [VTON] Generation failed", exc_info=True)
             raise Exception(f"Replicate 가상 피팅 실패: {str(e)}")
         
         finally:
@@ -176,28 +184,27 @@ class ReplicateVTONService:
         models = self.K_FASHION_MODELS[style]
         logger.info(f"   [_get_model_image] Available models for '{style}': {len(models)} images")
         
+        # 모델이 없는 경우
+        if not models:
+            logger.error(f"   [_get_model_image] ❌ No models found for style '{style}'")
+            raise ValueError(f"No models available for style '{style}'")
+        
         # 인덱스 처리
         if model_index is None:
             model_index = random.randint(0, len(models) - 1)
             logger.info(f"   [_get_model_image] Random index selected: {model_index}")
         else:
-            original_index = model_index
             model_index = model_index % len(models)
-            if original_index != model_index:
-                logger.info(f"   [_get_model_image] Index normalized: {original_index} → {model_index}")
         
         model_url = models[model_index]
         
         logger.info(f"   [_get_model_image] ✅ Returning URL: {model_url}")
-        logger.info(f"   [_get_model_image] URL type: {type(model_url)}")
-        logger.info(f"   [_get_model_image] URL length: {len(model_url) if model_url else 0}")
         
         return model_url
     
     def health_check(self) -> bool:
         """Replicate API 상태 확인"""
         try:
-            # API 토큰 체크
             if not self.api_token or not self.api_token.startswith('r8_'):
                 logger.error("Invalid Replicate API token format")
                 return False
