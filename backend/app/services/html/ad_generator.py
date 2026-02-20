@@ -16,18 +16,18 @@ def select_template(style_tags: list) -> str:
     # 스타일 태그를 소문자로 변환
     tags_lower = [tag.lower() if isinstance(tag, str) else "" for tag in style_tags]
     
-    # bold 템플릿 키워드
-    bold_keywords = ['대담한', '강렬한', '임팩트', '세일', '할인', 'bold', 'strong']
-    if any(keyword in tag for tag in tags_lower for keyword in bold_keywords):
-        return 'bold'
+    # retro 템플릿 키워드
+    retro_keywords = ['빈티지', '레트로', '클래식', '앤티크', '옛날', 'vintage', 'retro', 'Y2K', '페스티벌']
+    if any(keyword in tag for tag in tags_lower for keyword in retro_keywords):
+        return 'retro'  # ← vintage → retro
     
-    # vintage 템플릿 키워드
-    vintage_keywords = ['빈티지', '레트로', '클래식', '앤티크', '옛날', 'vintage', 'retro']
-    if any(keyword in tag for tag in tags_lower for keyword in vintage_keywords):
-        return 'vintage'
+    # romantic 템플릿 키워드
+    romantic_keywords = ['로맨틱', '페미닌', '우아한', '드레스', '원피스', 'romantic', 'elegant', 'feminine']
+    if any(keyword in tag for tag in tags_lower for keyword in romantic_keywords):
+        return 'romantic'  # ← 추가!
     
-    # 기본: minimal
-    return 'minimal'
+    # 기본: resort
+    return 'resort'  # ← minimal → resort
 
 class AdGenerator:
     """광고 카피 생성 및 HTML 생성"""
@@ -48,31 +48,32 @@ class AdGenerator:
         self, 
         vision_result: Dict,
         template_name: str,
-        caption: Optional[str] = None,  # ✨ 추가
-        user_request: Optional[str] = None
+        caption: Optional[str] = None,
+        user_request: Optional[str] = None,
+        ad_inputs: Optional[Dict] = None
     ) -> str:
-        """
-        GPT-4 Few-shot 프롬프트 생성
-        
-        Args:
-            vision_result: Vision AI 분석 결과
-            template_name: 선택된 템플릿 이름
-            caption: 확정된 캡션 (AdCaption에서 가져온 값)
-            user_request: 사용자 추가 요청 (선택)
-        
-        Returns:
-            프롬프트 문자열
-        """
+        """GPT-5 Few-shot 프롬프트 생성"""
         
         # 템플릿별 스타일 가이드
         style_guides = {
-            "minimal": "깔끔하고 세련된 느낌. 짧고 간결한 문구. 여백의 미를 강조.",
-            "bold": "강렬하고 임팩트 있는 느낌. 대문자 사용. 긴급함과 혜택 강조.",
-            "vintage": "따뜻하고 향수를 불러일으키는 느낌. 우아하고 클래식한 표현."
+            "resort": """매거진 리조트 스타일: 밝고 깔끔하며 세련된 느낌. 세리프 폰트로 우아하고 고급스럽게. 
+        여유롭고 경쾌한 톤. "여유", "휴가", "산뜻함", "리조트" 등의 키워드 사용.
+        예: "블루 린넨의 여유", "화이트 셔츠의 산뜻함"
+        """,
+            
+            "retro": """Y2K 페스티벌 레트로: 밝고 경쾌하며 트렌디한 느낌. 팝아트 스타일, 대담하고 재미있게. 
+        레트로 감성이지만 현대적. "빈티지", "클래식", "레트로", "페스티벌" 등의 키워드. 대문자 headline 가능.
+        예: "VINTAGE VIBES", "빈티지 코트의 클래식"
+        """,
+            
+            "romantic": """베이지 골드 로맨틱: 우아하고 청순하며 깨끗한 느낌. 금색 글리터 느낌의 고급스러움. 
+        부드럽고 페미닌한 톤. "우아함", "로맨틱", "드림", "엘레강스" 등의 키워드.
+        예: "골드 드레스의 우아함", "로맨틱 엘레강스"
+        """
         }
         
         template_info = AD_TEMPLATES[template_name]
-        style_guide = style_guides.get(template_name, style_guides["minimal"])
+        style_guide = style_guides.get(template_name, style_guides["resort"])
         
         # Few-shot 예시
         examples = self._get_few_shot_examples(template_name)
@@ -86,6 +87,29 @@ class AdGenerator:
 
 ⚠️ 위 캡션은 이미 확정된 것입니다. 이 캡션을 그대로 "caption" 필드에 사용하세요.
 """
+
+        ad_inputs_section = ""
+        if ad_inputs:
+            requirements = []
+            if ad_inputs.get('discount'):
+                requirements.append(f"할인율: {ad_inputs['discount']}")
+            if ad_inputs.get('period'):
+                requirements.append(f"기간: {ad_inputs['period']}")
+            if ad_inputs.get('brand'):
+                requirements.append(f"브랜드명: {ad_inputs['brand']}")
+            if ad_inputs.get('keywords'):
+                kw = ', '.join(ad_inputs['keywords']) if isinstance(ad_inputs['keywords'], list) else ad_inputs['keywords']
+                requirements.append(f"키워드: {kw}")
+            if ad_inputs.get('must_include'):
+                requirements.append(f"필수 포함: {ad_inputs['must_include']}")
+            
+            if requirements:
+                ad_inputs_section = f"""
+    [사용자 지정 광고 정보]
+    {chr(10).join(f"- {req}" for req in requirements)}
+
+    ⚠️ 위 정보를 반드시 JSON에 반영하세요. 특히 discount, brand, period는 사용자가 입력한 값 그대로 사용!
+    """
         
         prompt = f"""당신은 인스타그램 광고 전문 카피라이터입니다.
 
@@ -101,6 +125,7 @@ class AdGenerator:
 - 스타일: {', '.join(vision_result.get('style_tags', []))}
 
 {caption_section}
+{ad_inputs_section}
 {f"[사용자 요청사항]\n{user_request}\n" if user_request else ""}
 
 [Few-shot 예시]
@@ -126,86 +151,119 @@ class AdGenerator:
         return prompt
     
     def _get_few_shot_examples(self, template_name: str) -> str:
-        """
-        템플릿별 Few-shot 예시 반환
-        """
+        """템플릿별 Few-shot 예시 반환"""
         examples = {
-            "minimal": """예시 1:
-입력: 카테고리=아우터, 색상=블랙, 스타일=미니멀
-출력:
-{
-  "headline": "심플의 완성",
-  "subtext": "블랙 아우터",
-  "discount": "60% OFF",
-  "period": "03.15 - 03.22",
-  "brand": "SPECIAL SALE",
-  "caption": "🖤 심플하게, 세련되게. 블랙 아우터 특가!"
-}
+            "resort": """예시 1 (리조트 블라우스):
+    입력: 카테고리=상의, 색상=블루, 스타일=리조트
+    출력:
+    {
+    "headline": "블루 린넨의 여유",
+    "subtext": "편안한 휴가를 완성하는",
+    "discount": "30% OFF",
+    "period": "07.01 - 07.07",
+    "brand": "RESORT COLLECTION",
+    "caption": "🏖️ 시원한 블루 컬러로 완성하는 리조트 룩"
+    }
 
-예시 2:
-입력: 카테고리=상의, 색상=화이트, 스타일=모던
-출력:
-{
-  "headline": "화이트의 매력",
-  "subtext": "깔끔한 디자인",
-  "discount": "50% OFF",
-  "period": "03.20 - 03.27",
-  "brand": "NEW ARRIVAL",
-  "caption": "✨ 화이트 상의로 완성하는 모던 룩"
-}""",
-            
-            "bold": """예시 1:
-입력: 카테고리=아우터, 색상=레드, 스타일=대담한
-출력:
-{
-  "headline": "RED ALERT",
-  "subtext": "당신을 위한 특별한",
-  "discount": "70% OFF",
-  "period": "03.15 - 03.22",
-  "brand": "MEGA SALE",
-  "event_name": "봄맞이 대박 세일",
-  "caption": "🔥 레드 아우터 초특가! 지금 바로 GET"
-}
+    예시 2 (화이트 셔츠):
+    입력: 카테고리=상의, 색상=화이트, 스타일=깔끔
+    출력:
+    {
+    "headline": "화이트 셔츠의 산뜻함",
+    "subtext": "밝은 하루를 시작하는",
+    "discount": "40% OFF",
+    "period": "주말특가",
+    "brand": "FRESH STYLE",
+    "caption": "☀️ 깔끔하게 빛나는 여름 화이트 셔츠"
+    }
 
-예시 2:
-입력: 카테고리=하의, 색상=블루, 스타일=강렬한
-출력:
-{
-  "headline": "BOLD STYLE",
-  "subtext": "스타일의 정석",
-  "discount": "60% OFF",
-  "period": "03.20 - 03.27",
-  "brand": "FINAL SALE",
-  "event_name": "마지막 기회",
-  "caption": "⚡ 블루 하의 끝판왕! 놓치면 후회"
-}""",
-            
-            "vintage": """예시 1:
-입력: 카테고리=아우터, 색상=베이지, 스타일=빈티지
-출력:
-{
-  "headline": "시간을 입다",
-  "subtext": "빈티지 감성",
-  "discount": "50% OFF",
-  "period": "03.15 - 03.22",
-  "brand": "CLASSIC SALE",
-  "caption": "📜 클래식한 빈티지 코트의 매력"
-}
+    예시 3 (베이지 팬츠):
+    입력: 카테고리=하의, 색상=베이지, 스타일=리조트
+    출력:
+    {
+    "headline": "베이지 팬츠의 우아함",
+    "subtext": "리조트 룩의 완성",
+    "discount": "35% OFF",
+    "period": "한정수량",
+    "brand": "VACATION MODE",
+    "caption": "🌴 편안하면서도 세련된 베이지 컬러"
+    }""",
 
-예시 2:
-입력: 카테고리=상의, 색상=브라운, 스타일=레트로
-출력:
-{
-  "headline": "레트로의 귀환",
-  "subtext": "따뜻한 감성",
-  "discount": "60% OFF",
-  "period": "03.20 - 03.27",
-  "brand": "HERITAGE",
-  "caption": "🍂 브라운 상의로 완성하는 레트로 룩"
-}"""
+            "retro": """예시 1 (빈티지 코트):
+    입력: 카테고리=아우터, 색상=브라운, 스타일=빈티지
+    출력:
+    {
+    "headline": "VINTAGE CLASSIC",
+    "subtext": "시간이 만든 멋",
+    "discount": "35% OFF",
+    "period": "한정수량",
+    "brand": "RETRO VIBE",
+    "caption": "📼 클래식한 빈티지 스타일로 완성하는 가을"
+    }
+
+    예시 2 (레트로 니트):
+    입력: 카테고리=상의, 색상=브라운, 스타일=레트로
+    출력:
+    {
+    "headline": "브라운 니트의 따뜻함",
+    "subtext": "옛 감성을 담은",
+    "discount": "25% OFF",
+    "period": "2주간",
+    "brand": "NEPA STYLE",
+    "caption": "🍂 따뜻한 추억을 만드는 레트로 니트"
+    }
+
+    예시 3 (데님 재킷):
+    입력: 카테고리=아우터, 색상=블루, 스타일=Y2K
+    출력:
+    {
+    "headline": "DENIM FESTIVAL",
+    "subtext": "Y2K의 귀환",
+    "discount": "30% OFF",
+    "period": "주말한정",
+    "brand": "FESTIVAL MODE",
+    "caption": "✨ 페스티벌 감성 가득한 데님 스타일"
+    }""",
+
+            "romantic": """예시 1 (골드 드레스):
+    입력: 카테고리=원피스, 색상=골드, 스타일=로맨틱
+    출력:
+    {
+    "headline": "골드 드레스의 우아함",
+    "subtext": "꿈같은 순간을 위한",
+    "discount": "50% OFF",
+    "period": "봄맞이",
+    "brand": "ROMANTIC DREAM",
+    "caption": "✨ 우아하고 로맨틱한 골드 드레스"
+    }
+
+    예시 2 (레이스 원피스):
+    입력: 카테고리=원피스, 색상=베이지, 스타일=엘레강스
+    출력:
+    {
+    "headline": "레이스의 로맨스",
+    "subtext": "화려하게 빛나는",
+    "discount": "45% OFF",
+    "period": "5일간",
+    "brand": "ELEGANT STYLE",
+    "caption": "💕 섬세한 레이스 디테일이 돋보이는 원피스"
+    }
+
+    예시 3 (베이지 원피스):
+    입력: 카테고리=원피스, 색상=베이지, 스타일=청순
+    출력:
+    {
+    "headline": "베이지 엘레강스",
+    "subtext": "청순한 아름다움",
+    "discount": "40% OFF",
+    "period": "한정기간",
+    "brand": "STONEHENGE",
+    "caption": "🌸 부드러운 베이지로 완성하는 로맨틱 룩"
+    }"""
         }
         
-        return examples.get(template_name, examples["minimal"])
+        return examples.get(template_name, examples["resort"])  # minimal → resort
+
     
     def generate_ad_copy(
         self, 
@@ -384,7 +442,8 @@ class AdGenerator:
         image_url: str,
         template_name: str,  # ✨ 템플릿 명시
         caption: Optional[str] = None,
-        user_request: Optional[str] = None
+        user_request: Optional[str] = None,
+        ad_inputs: Optional[Dict] = None
     ) -> Dict:
         """
         ✨ NEW: 특정 템플릿으로 광고 생성
@@ -415,9 +474,22 @@ class AdGenerator:
             vision_result,
             template_name,
             caption,
-            user_request
+            user_request,
+            ad_inputs
         )
         
+        if ad_inputs:
+            print(f"📝 사용자 광고 정보:")
+            if ad_inputs.get('discount'):
+                print(f"   - 할인율: {ad_inputs['discount']}")
+                ad_copy['discount'] = ad_inputs['discount']
+            if ad_inputs.get('brand'):
+                print(f"   - 브랜드: {ad_inputs['brand']}")
+                ad_copy['brand'] = ad_inputs['brand']
+            if ad_inputs.get('period'):
+                print(f"   - 기간: {ad_inputs['period']}")
+                ad_copy['period'] = ad_inputs['period']
+
         # 3. 템플릿 HTML 가져오기
         template_html = AD_TEMPLATES[template_name]['html']
         
@@ -447,7 +519,8 @@ class AdGenerator:
         vision_result: Dict,
         template_name: str,  # ✨ 템플릿 고정
         caption: Optional[str] = None,
-        user_request: Optional[str] = None
+        user_request: Optional[str] = None,
+        ad_inputs: Optional[Dict] = None
     ) -> Dict:
         """
         ✨ NEW: 특정 템플릿에 맞는 광고 카피 생성
@@ -463,7 +536,7 @@ class AdGenerator:
         """
         
         # 프롬프트 생성 (템플릿 고정)
-        prompt = self._build_prompt(vision_result, template_name, caption, user_request)
+        prompt = self._build_prompt(vision_result, template_name, caption, user_request, ad_inputs)
         
         # GPT 호출
         try:
@@ -520,7 +593,25 @@ class AdGenerator:
             # 캡션이 제공된 경우 강제로 사용
             if caption:
                 ad_copy['caption'] = caption
+
+            if ad_inputs and ad_inputs.get('must_include'):
+                must_include = ad_inputs['must_include']
+                current_headline = ad_copy.get('headline', '')
+                
+                # headline에 필수 문구가 없으면 추가
+                if must_include not in current_headline:
+                    ad_copy['headline'] = f"{current_headline} - {must_include}"
+                    print(f"✅ 필수 문구 추가: {ad_copy['headline']}")
             
+            if ad_inputs and ad_inputs.get('period'):
+                period = ad_inputs['period']
+                current_headline = ad_copy.get('headline', '')
+                
+                # 기간이 없으면 추가
+                if period not in current_headline:
+                    ad_copy['headline'] = f"{current_headline} ({period})"
+                    print(f"✅ 기간 추가: {ad_copy['headline']}")
+
             # 템플릿 이름 추가
             ad_copy['template_used'] = template_name
             

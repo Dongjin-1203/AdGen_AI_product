@@ -30,3 +30,11 @@ export const AVAILABLE_STYLES: readonly StyleOption[] = [
   { value: 'retro', label: '레트로', emoji: '📻', description: '빈티지하고 복고적인 감성' },
   { value: 'romantic', label: '로맨틱', emoji: '💕', description: '부드럽고 여성스러운 분위기' },
 ] as const;
+
+export interface AdInputs {
+  discount: string;
+  period: string;
+  brand: string;
+  keywords: string;
+  mustInclude: string;
+}

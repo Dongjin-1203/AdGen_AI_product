@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthStore } from '@/lib/store';
-import { Content, StepData, AVAILABLE_STYLES } from './types';
+import { Content, StepData, AVAILABLE_STYLES, AdInputs } from './types';
 import GallerySelector from './components/GallerySelector';
 import StyleSelector from './components/StyleSelector';
 import GenerateButton from './components/GenerateButton';
 import StepCard from './components/StepCard';
+import AdInputForm from './components/AdInputForm';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -28,6 +29,14 @@ export default function DashboardPage() {
   const [userPrompt, setUserPrompt] = useState('');
   const [finalImageUrl, setFinalImageUrl] = useState<string>('');
   const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [adInputs, setAdInputs] = useState<AdInputs>({
+    discount: '40% OFF',
+    period: '',
+    brand: 'SPRING SALE',
+    keywords: '',
+    mustInclude: '',
+  });
 
   // ===== 초기화 =====
   useEffect(() => {
@@ -199,6 +208,13 @@ export default function DashboardPage() {
           content_id: selectedContent.content_id,
           style: selectedStyle,
           user_prompt: userPrompt || undefined,
+          ad_inputs: {
+            discount: adInputs.discount || null,
+            period: adInputs.period || null,
+            brand: adInputs.brand || null,
+            keywords: adInputs.keywords ? adInputs.keywords.split(',').map(k => k.trim()) : [],
+            must_include: adInputs.mustInclude || null,
+          },
         }),
       });
 
@@ -356,33 +372,56 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-3">
+              {/* 메인 액션 */}
               <a
                 href={final_image_url}
                 download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2"
+                className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-bold hover:from-green-700 hover:to-green-800 transition flex items-center justify-center gap-2 shadow-lg"
               >
-                <span>💾</span>
-                <span>다운로드</span>
+                <span>✅</span>
+                <span>승인하고 다운로드</span>
               </a>
               
-              <Link
-                href="/history"
-                className="py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition flex items-center justify-center gap-2"
-              >
-                <span>📜</span>
-                <span>히스토리</span>
-              </Link>
-              
-              <button
-                onClick={handleReset}
-                className="py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
-              >
-                <span>🎨</span>
-                <span>새로 만들기</span>
-              </button>
+              {/* 보조 액션 */}
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={handleRetry}
+                  disabled={isRetrying}
+                  className="py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>🔄</span>
+                  <span>{isRetrying ? '생성 중...' : '재시도'}</span>
+                </button>
+                
+                <Link
+                  href="/history"
+                  className="py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition flex items-center justify-center gap-2"
+                >
+                  <span>📜</span>
+                  <span>히스토리</span>
+                </Link>
+                
+                <button
+                  onClick={handleReset}
+                  className="py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                >
+                  <span>🎨</span>
+                  <span>새로 만들기</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 재시도 안내 */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-4">
+              <h5 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                <span>💡</span> 재시도 기능
+              </h5>
+              <div className="text-sm text-purple-800 space-y-1">
+                <p>• 동일한 옷과 광고 정보로 AI가 다시 생성합니다</p>
+                <p>• 가상 피팅, 배경, 카피가 모두 새롭게 만들어집니다</p>
+                <p>• 결과가 마음에 안 들 때 여러 번 시도해보세요</p>
+              </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -404,6 +443,80 @@ export default function DashboardPage() {
         wsConnection.close();
         setWsConnection(null);
       }
+    }
+  };
+
+  // ===== 재시도 =====
+  const handleRetry = async () => {
+    if (!selectedContent) return;
+    
+    setIsRetrying(true);
+    
+    // 기존 스텝 초기화
+    setSteps([]);
+    setProgress(0);
+    setFinalImageUrl('');
+    
+    // 재시도 메시지
+    addStep({
+      id: 'retry',
+      title: '🔄 재시도 중...',
+      status: 'processing',
+      content: (
+        <div className="flex flex-col items-center py-8">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mb-4"></div>
+          <p className="text-gray-600">동일한 설정으로 AI가 다시 생성하고 있습니다...</p>
+          <p className="text-sm text-gray-500 mt-2">VTON, 배경, 카피가 모두 새롭게 생성됩니다</p>
+        </div>
+      ),
+      timestamp: new Date(),
+    });
+    
+    // 동일한 설정으로 다시 API 호출
+    try {
+      const response = await fetch(`${API_URL}/api/v1/pipeline/run`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content_id: selectedContent.content_id,
+          style: selectedStyle,
+          user_prompt: userPrompt || undefined,
+          ad_inputs: {
+            discount: adInputs.discount || null,
+            period: adInputs.period || null,
+            brand: adInputs.brand || null,
+            keywords: adInputs.keywords ? adInputs.keywords.split(',').map(k => k.trim()) : [],
+            must_include: adInputs.mustInclude || null,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('재시도 실패');
+      }
+
+      const data = await response.json();
+      const { job_id } = data;
+
+      // WebSocket 연결
+      connectWebSocket(job_id);
+
+    } catch (err: any) {
+      console.error('Retry error:', err);
+      updateStep('retry', {
+        status: 'error',
+        content: (
+          <div className="text-red-600 text-center py-4">
+            <p className="font-semibold">재시도에 실패했습니다.</p>
+            <p className="text-sm mt-2">{err.message}</p>
+          </div>
+        ),
+      });
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -466,13 +579,19 @@ export default function DashboardPage() {
                 />
               ) : null}
               onSelectStyle={step.id === 'select-style' && step.status === 'processing' ? (
-                <StyleSelector
-                  styles={AVAILABLE_STYLES}
-                  selectedStyle={selectedStyle}
-                  userPrompt={userPrompt}
-                  onSelectStyle={handleSelectStyle}
-                  onPromptChange={setUserPrompt}
-                />
+                <>
+                  <AdInputForm
+                    inputs={adInputs}
+                    onChange={setAdInputs}
+                  />
+                  <StyleSelector
+                    styles={AVAILABLE_STYLES}
+                    selectedStyle={selectedStyle}
+                    userPrompt={userPrompt}
+                    onSelectStyle={handleSelectStyle}
+                    onPromptChange={setUserPrompt}
+                  />
+                </>
               ) : null}
               onGenerate={step.id === 'generate' && step.status === 'processing' ? (
                 <GenerateButton

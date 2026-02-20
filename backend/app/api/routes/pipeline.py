@@ -36,6 +36,7 @@ class PipelineRunRequest(BaseModel):
     style: str = "resort"           # resort / retro / romantic
     model_index: Optional[int] = None
     user_prompt: Optional[str] = None
+    ad_inputs: Optional[dict] = None
 
     class Config:
         json_schema_extra = {
@@ -43,7 +44,11 @@ class PipelineRunRequest(BaseModel):
                 "content_id": "uuid-here",
                 "style": "resort",
                 "model_index": None,
-                "user_prompt": "밝고 화사한 느낌으로"
+                "user_prompt": "밝고 화사한 느낌으로",
+                "ad_inputs": {
+                    "discount": "40% OFF",
+                    "brand": "SPRING SALE"
+                }
             }
         }
 
@@ -131,6 +136,7 @@ async def run_pipeline(
         style=request.style,
         model_index=request.model_index,
         user_prompt=request.user_prompt,
+        ad_inputs=request.ad_inputs,
     )
 
     _pipeline_states[job_id] = initial_state

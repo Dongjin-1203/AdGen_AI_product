@@ -1,15 +1,17 @@
 """
 인스타그램 광고 템플릿 라이브러리
-1080×1080px 정사각형 포맷
-오버레이 방식: 배경 이미지 위에 텍스트 배치
+K-Fashion 모델 컨셉에 최적화된 3가지 템플릿
+- resort: 매거진 리조트
+- retro: Y2K 페스티벌
+- romantic: 베이지 골드 우아함
 """
 
 AD_TEMPLATES = {
-    "minimal": {
-        "name": "Minimal Overlay",
-        "description": "배경 이미지 위에 깔끔한 텍스트 오버레이",
-        "colors": ["#FFFFFF", "#000000", "#F5F5F5"],
-        "best_for": ["미니멀", "모던", "심플", "깔끔", "현대적"],
+    "resort": {
+        "name": "Resort Magazine",
+        "description": "밝고 깔끔한 매거진 리조트 - 상의/하의 모델",
+        "colors": ["#F5E6D3", "#B8956A", "#FFFFFF"],
+        "best_for": ["리조트", "매거진", "깔끔한", "고급스러운"],
         "html": """<!DOCTYPE html>
 <html>
 <head>
@@ -24,12 +26,13 @@ AD_TEMPLATES = {
             font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
         }
         .background-image {
-            width: 95%;
-            height: 95%;
+            width: 96%;
+            height: 96%;
             object-fit: contain;
             position: absolute;
-            top: 2.5%;
-            left: 2.5%;
+            top: 2%;
+            left: 2%;
+            filter: brightness(1.05) saturate(1.1);
         }
         .overlay {
             position: absolute;
@@ -37,61 +40,65 @@ AD_TEMPLATES = {
             height: 100%;
             background: linear-gradient(
                 to bottom,
-                rgba(0,0,0,0.3) 0%,
-                rgba(0,0,0,0) 50%,
-                rgba(0,0,0,0.5) 100%
+                rgba(245, 230, 211, 0.15) 0%,
+                rgba(245, 230, 211, 0) 40%,
+                rgba(0, 0, 0, 0.5) 100%
             );
         }
-        .brand {
+        .brand-box {
             position: absolute;
-            top: 60px;
-            left: 60px;
-            font-size: 22px;
+            top: 50px;
+            left: 50px;
+            background: rgba(184, 149, 106, 0.9);
             color: white;
-            letter-spacing: 4px;
+            padding: 18px 50px;
+            font-family: Georgia, serif;
+            font-size: 28px;
+            letter-spacing: 10px;
             text-transform: uppercase;
-            font-weight: 300;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
         .headline {
             position: absolute;
             bottom: 200px;
             left: 60px;
             right: 60px;
-            font-size: 64px;
+            font-family: Georgia, 'Playfair Display', serif;
+            font-size: 68px;
             font-weight: 700;
             color: white;
-            line-height: 1.2;
-            letter-spacing: -2px;
-            text-shadow: 3px 3px 12px rgba(0,0,0,0.8);
+            line-height: 1.25;
+            letter-spacing: -1px;
+            text-shadow: 3px 3px 15px rgba(0,0,0,0.8);
+        }
+        .period {
+            position: absolute;
+            bottom: 150px;
+            left: 60px;
+            font-size: 26px;
+            font-weight: 600;
+            color: #FFD700;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
         }
         .discount {
             position: absolute;
             bottom: 60px;
             right: 60px;
-            font-size: 80px;
-            font-weight: 900;
-            color: #FF4757;
             background: white;
+            color: #B8956A;
             padding: 25px 50px;
-            border-radius: 20px;
+            border-radius: 15px;
+            font-size: 72px;
+            font-weight: 900;
             box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        }
-        .period {
-            position: absolute;
-            bottom: 70px;
-            left: 60px;
-            font-size: 20px;
-            color: white;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.7);
         }
     </style>
 </head>
 <body>
     <img src="{{IMAGE_URL}}" class="background-image" alt="Fashion Ad">
     <div class="overlay"></div>
-    <div class="brand">{{BRAND}}</div>
+    <div class="brand-box">{{BRAND}}</div>
     <h1 class="headline">{{HEADLINE}}</h1>
     <div class="period">{{PERIOD}}</div>
     <div class="discount">{{DISCOUNT}}</div>
@@ -99,11 +106,11 @@ AD_TEMPLATES = {
 </html>"""
     },
     
-    "bold": {
-        "name": "Bold Impact Overlay",
-        "description": "강렬한 그라데이션 배경에 임팩트 있는 텍스트",
-        "colors": ["#E74C3C", "#FFFFFF", "#2C3E50"],
-        "best_for": ["대담한", "강렬한", "임팩트", "세일", "할인"],
+    "retro": {
+        "name": "Retro Festival",
+        "description": "밝고 경쾌한 Y2K 레트로 페스티벌 - 상의/하의 모델",
+        "colors": ["#FF6B6B", "#4ECDC4", "#FFE66D"],
+        "best_for": ["레트로", "페스티벌", "Y2K", "트렌디"],
         "html": """<!DOCTYPE html>
 <html>
 <head>
@@ -118,12 +125,13 @@ AD_TEMPLATES = {
             font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
         }
         .background-image {
-            width: 95%;
-            height: 95%;
+            width: 96%;
+            height: 96%;
             object-fit: contain;
             position: absolute;
-            top: 2.5%;
-            left: 2.5%;
+            top: 2%;
+            left: 2%;
+            filter: brightness(1.05) contrast(1.05);
         }
         .overlay {
             position: absolute;
@@ -131,240 +139,238 @@ AD_TEMPLATES = {
             height: 100%;
             background: linear-gradient(
                 135deg,
-                rgba(231, 76, 60, 0.7) 0%,
-                rgba(231, 76, 60, 0.3) 50%,
-                rgba(44, 62, 80, 0.8) 100%
+                rgba(255, 230, 109, 0.3) 0%,
+                rgba(78, 205, 196, 0.2) 50%,
+                rgba(255, 107, 107, 0.4) 100%
             );
         }
-        .headline {
-            position: absolute;
-            top: 80px;
-            left: 60px;
-            right: 60px;
-            font-size: 80px;
-            font-weight: 900;
-            color: white;
-            line-height: 1.1;
-            text-transform: uppercase;
-            letter-spacing: -3px;
-            text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
-        }
-        .event-name {
-            position: absolute;
-            bottom: 180px;
-            left: 60px;
-            font-size: 32px;
-            font-weight: 600;
-            color: white;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-        }
-        .discount-badge {
-            position: absolute;
-            bottom: 60px;
-            right: 60px;
-            background: white;
-            color: #E74C3C;
-            padding: 30px 60px;
-            border-radius: 20px;
-            font-size: 72px;
-            font-weight: 900;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        }
-    </style>
-</head>
-<body>
-    <img src="{{IMAGE_URL}}" class="background-image" alt="Fashion Ad">
-    <div class="overlay"></div>
-    <div class="headline">{{HEADLINE}}</div>
-    <div class="event-name">{{EVENT_NAME}}</div>
-    <div class="discount-badge">{{DISCOUNT}}</div>
-</body>
-</html>"""
-    },
-    
-    "vintage": {
-        "name": "Vintage Overlay",
-        "description": "세피아 필터와 레트로 타이포 오버레이",
-        "colors": ["#D4A574", "#8B7355", "#F5E6D3"],
-        "best_for": ["빈티지", "레트로", "클래식", "앤티크", "옛날"],
-        "html": """<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            width: 1080px;
-            height: 1080px;
-            position: relative;
-            overflow: hidden;
-            font-family: Georgia, 'Playfair Display', serif;
-        }
-        .background-image {
-            width: 95%;
-            height: 95%;
-            object-fit: contain;
-            position: absolute;
-            top: 2.5%;
-            left: 2.5%;
-            filter: sepia(40%) contrast(95%);
-        }
-        .overlay {
+        .retro-pattern {
             position: absolute;
             width: 100%;
             height: 100%;
-            background: linear-gradient(
-                to bottom,
-                rgba(213, 165, 116, 0.4) 0%,
-                rgba(213, 165, 116, 0.1) 50%,
-                rgba(93, 78, 55, 0.6) 100%
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.03) 10px,
+                rgba(255, 255, 255, 0.03) 20px
             );
-        }
-        .border-frame {
-            position: absolute;
-            top: 40px;
-            left: 40px;
-            right: 40px;
-            bottom: 40px;
-            border: 8px solid rgba(139, 115, 85, 0.7);
             pointer-events: none;
         }
-        .headline {
-            position: absolute;
-            bottom: 200px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 68px;
-            font-weight: 700;
-            color: #F5E6D3;
-            text-shadow: 3px 3px 10px rgba(93, 78, 55, 0.9);
-            letter-spacing: 2px;
-        }
-        .discount {
-            position: absolute;
-            bottom: 100px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 72px;
-            color: #D4A574;
-            font-weight: 700;
-            text-shadow: 3px 3px 10px rgba(0,0,0,0.8);
-        }
-        .period {
-            position: absolute;
-            bottom: 50px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 22px;
-            color: #F5E6D3;
-            letter-spacing: 3px;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.7);
-        }
-    </style>
-</head>
-<body>
-    <img src="{{IMAGE_URL}}" class="background-image" alt="Fashion Ad">
-    <div class="overlay"></div>
-    <div class="border-frame"></div>
-    <h1 class="headline">{{HEADLINE}}</h1>
-    <div class="discount">{{DISCOUNT}}</div>
-    <div class="period">{{PERIOD}}</div>
-</body>
-</html>"""
-    },
-    
-    "lookbook": {
-        "name": "Lookbook Style",
-        "description": "#LOOK 태그와 제품 라벨이 있는 룩북 스타일",
-        "colors": ["#2C3E50", "#FFFFFF", "#FF6B9D"],
-        "best_for": ["룩북", "스트릿", "캐주얼", "트렌디", "영"],
-        "html": """<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            width: 1080px;
-            height: 1080px;
-            position: relative;
-            overflow: hidden;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-        }
-        .background-image {
-            width: 95%;
-            height: 95%;
-            object-fit: contain;
-            position: absolute;
-            top: 2.5%;
-            left: 2.5%;
-        }
-        .overlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                to bottom,
-                rgba(44, 62, 80, 0.4) 0%,
-                rgba(44, 62, 80, 0) 40%,
-                rgba(44, 62, 80, 0) 60%,
-                rgba(44, 62, 80, 0.6) 100%
-            );
-        }
-        .hashtag {
-            position: absolute;
-            top: 60px;
-            right: 60px;
-            font-size: 80px;
-            font-weight: 900;
-            color: #FF6B9D;
-            text-shadow: 3px 3px 10px rgba(0,0,0,0.8);
-            letter-spacing: 2px;
-        }
         .brand {
-            position: absolute;
-            bottom: 60px;
-            left: 60px;
-            font-size: 56px;
-            font-weight: 700;
-            color: white;
-            letter-spacing: 3px;
-            text-shadow: 3px 3px 12px rgba(0,0,0,0.8);
-        }
-        .headline {
-            position: absolute;
-            bottom: 150px;
-            left: 60px;
-            font-size: 32px;
-            font-weight: 300;
-            color: white;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-        }
-        .discount {
             position: absolute;
             top: 60px;
             left: 60px;
             font-size: 48px;
             font-weight: 900;
+            color: #FF6B6B;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 
+                3px 3px 0px #FFE66D,
+                6px 6px 0px rgba(0,0,0,0.2);
+            font-style: italic;
+        }
+        .headline {
+            position: absolute;
+            bottom: 240px;
+            left: 60px;
+            right: 60px;
+            font-size: 76px;
+            font-weight: 900;
             color: white;
-            background: #FF6B9D;
-            padding: 20px 40px;
-            border-radius: 15px;
-            box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+            line-height: 1.1;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            text-shadow: 
+                4px 4px 0px #FF6B6B,
+                8px 8px 0px rgba(0,0,0,0.3);
+        }
+        .period {
+            position: absolute;
+            bottom: 180px;
+            left: 60px;
+            background: #FFE66D;
+            color: #2D3436;
+            padding: 12px 30px;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            transform: rotate(-2deg);
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+        }
+        .discount {
+            position: absolute;
+            bottom: 60px;
+            right: 60px;
+            background: white;
+            color: #FF6B6B;
+            padding: 35px 50px;
+            border-radius: 50%;
+            font-size: 68px;
+            font-weight: 900;
+            box-shadow: 
+                0 0 0 8px #FF6B6B,
+                0 0 0 16px white,
+                0 0 0 24px #4ECDC4,
+                8px 8px 30px rgba(0,0,0,0.3);
+            transform: rotate(8deg);
         }
     </style>
 </head>
 <body>
     <img src="{{IMAGE_URL}}" class="background-image" alt="Fashion Ad">
     <div class="overlay"></div>
-    <div class="hashtag">#LOOK</div>
-    <div class="discount">{{DISCOUNT}}</div>
-    <h1 class="headline">{{HEADLINE}}</h1>
+    <div class="retro-pattern"></div>
     <div class="brand">{{BRAND}}</div>
+    <h1 class="headline">{{HEADLINE}}</h1>
+    <div class="period">{{PERIOD}}</div>
+    <div class="discount">{{DISCOUNT}}</div>
+</body>
+</html>"""
+    },
+    
+    "romantic": {
+        "name": "Romantic Elegance",
+        "description": "우아하고 청순한 로맨틱 엘레강스 - 원피스 모델",
+        "colors": ["#F5E6D3", "#D4AF37", "#FFF8E7"],
+        "best_for": ["로맨틱", "우아한", "청순한", "드레스"],
+        "html": """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1080px;
+            height: 1080px;
+            position: relative;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
+        }
+        .background-image {
+            width: 96%;
+            height: 96%;
+            object-fit: contain;
+            position: absolute;
+            top: 2%;
+            left: 2%;
+            filter: brightness(1.08) saturate(1.05);
+        }
+        .overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 248, 231, 0.3) 0%,
+                rgba(245, 230, 211, 0.1) 50%,
+                rgba(212, 175, 55, 0.25) 100%
+            );
+        }
+        .soft-glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at 50% 20%,
+                rgba(255, 248, 231, 0.4) 0%,
+                transparent 50%
+            );
+            pointer-events: none;
+        }
+        .brand {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 300;
+            color: #D4AF37;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            text-shadow: 
+                0 0 10px rgba(212, 175, 55, 0.5),
+                0 0 20px rgba(212, 175, 55, 0.3),
+                2px 2px 4px rgba(0,0,0,0.2);
+            font-family: Georgia, serif;
+        }
+        .headline {
+            position: absolute;
+            bottom: 240px;
+            left: 80px;
+            right: 80px;
+            text-align: center;
+            font-family: Georgia, 'Playfair Display', serif;
+            font-size: 68px;
+            font-weight: 600;
+            color: white;
+            line-height: 1.3;
+            letter-spacing: 0px;
+            text-shadow: 
+                0 0 30px rgba(212, 175, 55, 0.6),
+                3px 3px 15px rgba(0,0,0,0.5);
+        }
+        .period {
+            position: absolute;
+            bottom: 180px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 26px;
+            font-weight: 500;
+            color: #D4AF37;
+            letter-spacing: 4px;
+            text-shadow: 
+                0 0 10px rgba(212, 175, 55, 0.5),
+                2px 2px 6px rgba(0,0,0,0.3);
+            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+            padding-bottom: 10px;
+            margin: 0 200px;
+        }
+        .discount {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFF8E7 0%, #F5E6D3 100%);
+            color: #D4AF37;
+            padding: 35px 55px;
+            border-radius: 50%;
+            font-size: 68px;
+            font-weight: 700;
+            box-shadow: 
+                0 0 0 3px #D4AF37,
+                0 0 30px rgba(212, 175, 55, 0.4),
+                0 10px 40px rgba(0,0,0,0.2);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+        .deco-line {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 1px;
+            background: linear-gradient(
+                to right,
+                transparent,
+                rgba(212, 175, 55, 0.5),
+                transparent
+            );
+        }
+    </style>
+</head>
+<body>
+    <img src="{{IMAGE_URL}}" class="background-image" alt="Fashion Ad">
+    <div class="overlay"></div>
+    <div class="soft-glow"></div>
+    <div class="brand">{{BRAND}}</div>
+    <h1 class="headline">{{HEADLINE}}</h1>
+    <div class="deco-line"></div>
+    <div class="period">{{PERIOD}}</div>
+    <div class="discount">{{DISCOUNT}}</div>
 </body>
 </html>"""
     }
@@ -372,23 +378,23 @@ AD_TEMPLATES = {
 
 
 def get_template(template_name: str) -> dict:
-    """
-    템플릿 가져오기
-    
-    Args:
-        template_name: 'minimal', 'bold', 'vintage', 'lookbook'
-    
-    Returns:
-        템플릿 정보 dict
-    """
-    return AD_TEMPLATES.get(template_name, AD_TEMPLATES["minimal"])
+    """템플릿 가져오기"""
+    return AD_TEMPLATES.get(template_name, AD_TEMPLATES["resort"])
 
 
 def list_templates() -> list:
-    """
-    사용 가능한 모든 템플릿 목록
-    
-    Returns:
-        템플릿 이름 리스트
-    """
-    return list(AD_TEMPLATES.keys())
+    """사용 가능한 템플릿 목록"""
+    return ["resort", "retro", "romantic"]
+
+
+# ⚠️ 임시 호환성 (제거 예정)
+if "minimal" not in AD_TEMPLATES:
+    AD_TEMPLATES["minimal"] = AD_TEMPLATES["resort"]
+if "minima" not in AD_TEMPLATES:
+    AD_TEMPLATES["minima"] = AD_TEMPLATES["resort"]
+if "bold" not in AD_TEMPLATES:
+    AD_TEMPLATES["bold"] = AD_TEMPLATES["retro"]
+if "vintage" not in AD_TEMPLATES:
+    AD_TEMPLATES["vintage"] = AD_TEMPLATES["romantic"]
+
+print("✅ ad_templates loaded: resort, retro, romantic")

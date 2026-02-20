@@ -49,22 +49,35 @@ class GeminiImageGenerator:
             # 스타일별 프롬프트
             style_prompts = {
                 'resort': (
-                    "Transform this clothing item into a professional resort-style fashion advertisement. "
-                    "Place it in a bright, tropical beach setting with natural sunlight, ocean background, "
-                    "and vacation vibes. Create a professional commercial photography style with high quality. "
-                    "Keep the clothing item as the main focus but enhance the background and atmosphere."
+                    "Transform this into a professional RESORT MAGAZINE advertisement. "
+                    "Create a bright, clean, tropical vacation setting with: "
+                    "white sand beach or poolside, palm trees, natural daylight, azure water background. "
+                    "Style: Editorial magazine photography, bright and airy, luxury resort wear catalog. "
+                    "Lighting: Natural sunlight, bright but soft shadows. "
+                    "Mood: Relaxed, vacation vibes, sophisticated leisure. "
+                    "Keep the clothing as main focus with professional model pose."
                 ),
+                
                 'retro': (
-                    "Transform this clothing item into a professional retro-style fashion advertisement. "
-                    "Place it in a vintage 70s-80s aesthetic setting with nostalgic atmosphere, "
-                    "analog film quality look, and classic poses. Create an editorial photography style. "
-                    "Keep the clothing item as the main focus but add retro elements and color grading."
+                    "Transform this into a Y2K FESTIVAL RETRO advertisement. "
+                    "Create a vibrant retro setting with: "
+                    "bright pop art colors (red, yellow, cyan), festival atmosphere, playful energy. "
+                    "Style: NOT dark vintage - instead use bright 2000s aesthetic, fun and energetic. "
+                    "Add retro patterns or geometric shapes as decorative elements. "
+                    "Think: NEPA festival poster, bright retro festival vibes, NOT sepia-toned. "
+                    "Lighting: Bright and colorful, pop art style lighting. "
+                    "Mood: Fun, energetic, festival party atmosphere."
                 ),
+                
                 'romantic': (
-                    "Transform this clothing item into a professional romantic-style fashion advertisement. "
-                    "Place it in a soft, feminine setting with dreamy atmosphere, pastel colors, "
-                    "and elegant mood. Create a luxury brand photography style with professional lighting. "
-                    "Keep the clothing item as the main focus but enhance with romantic elements."
+                    "Transform this into an ELEGANT BEIGE-GOLD ROMANTIC advertisement. "
+                    "Create a sophisticated romantic setting with: "
+                    "beige/cream/champagne color palette, soft golden lighting, elegant interior or garden. "
+                    "Add elements: delicate flowers (roses, peonies), elegant furniture, soft curtains. "
+                    "Style: Luxury brand photography, NOT bright pink - use beige and gold tones. "
+                    "Think: NewJeans Beautiful Holiday, sophisticated magazine cover, elegant and pure. "
+                    "Lighting: Soft golden hour glow, dreamy but not overly bright. "
+                    "Mood: Elegant, sophisticated, pure beauty, luxury romance."
                 )
             }
             

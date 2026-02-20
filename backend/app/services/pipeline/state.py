@@ -40,6 +40,7 @@ class PipelineState(TypedDict):
     style: str                      # resort / retro / romantic
     model_index: Optional[int]      # K-Fashion 모델 인덱스 (None=랜덤)
     user_prompt: Optional[str]      # 사용자 추가 요청
+    ad_inputs: Optional[dict]
 
     # ===== 각 단계 결과 이미지 =====
     removed_bg_url: Optional[str]       # Node 2: 배경제거 결과
@@ -97,6 +98,7 @@ def create_initial_state(
     style: str,
     model_index: Optional[int] = None,
     user_prompt: Optional[str] = None,
+    ad_inputs: Optional[dict] = None
 ) -> PipelineState:
     """초기 파이프라인 상태 생성"""
     now = datetime.utcnow().isoformat()
@@ -110,6 +112,7 @@ def create_initial_state(
         style=style,
         model_index=model_index,
         user_prompt=user_prompt,
+        ad_inputs=ad_inputs,
         removed_bg_url=None,
         fitted_image_url=None,
         background_image_url=None,

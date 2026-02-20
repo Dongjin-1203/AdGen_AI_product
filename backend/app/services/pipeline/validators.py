@@ -30,30 +30,12 @@ def check_vton_category_conflict(
 ) -> Tuple[bool, Optional[str]]:
     """
     IDM-VTON 카테고리 충돌 감지
-
-    Args:
-        product_category: 상품 카테고리 (Vision AI 분석 결과)
-        style: 선택된 스타일 (resort/retro/romantic)
-
-    Returns:
-        (is_conflict, error_message)
-        is_conflict=True → 파이프라인 중단
+    
+    ⭐ 모든 카테고리-스타일 조합 허용
+    - VTON AI가 알아서 최적 합성
+    - 사용자 선택 자유도 증가
     """
-    if not product_category:
-        # 카테고리 정보 없으면 통과 (경고만)
-        return False, None
-
-    model_wearing = MODEL_WEARING_CATEGORY.get(style, "상의")
-    conflict_categories = CATEGORY_CONFLICT_MAP.get(product_category, [])
-
-    if model_wearing in conflict_categories:
-        error_msg = (
-            f"카테고리 충돌 감지: '{product_category}' 상품은 "
-            f"'{style}' 스타일 모델({model_wearing} 착용)과 함께 사용할 수 없습니다. "
-            f"resort 또는 retro 스타일을 선택해주세요."
-        )
-        return True, error_msg
-
+    # 모든 조합 허용
     return False, None
 
 

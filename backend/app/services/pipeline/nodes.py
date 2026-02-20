@@ -291,8 +291,28 @@ async def node_generate_caption(state: PipelineState) -> PipelineState:
 카테고리: {state.get('product_category', '패션')}
 추가 요청: {state.get('user_prompt', '없음')}"""
 
+        # ⭐ ad_inputs 추가
+        ad_inputs = state.get('ad_inputs')
+        if ad_inputs:
+            print(f"📝 캡션 생성 시 사용자 입력 반영:")
+            
+            if ad_inputs.get('keywords'):
+                keywords = ad_inputs['keywords']
+                if isinstance(keywords, list):
+                    keywords_str = ', '.join(keywords)
+                else:
+                    keywords_str = keywords
+                user_message += f"\n\n반드시 포함할 키워드: {keywords_str}"
+                print(f"   - 키워드: {keywords_str}")
+            
+            if ad_inputs.get('must_include'):
+                must_include = ad_inputs['must_include']
+                user_message += f"\n\n⚠️ 반드시 포함해야 할 문구: {must_include}"
+                user_message += f"\n위 문구를 캡션에 자연스럽게 포함시키세요."
+                print(f"   - 필수 문구: {must_include}")
+
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5-chat-latest",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
@@ -376,15 +396,8 @@ async def node_generate_html(state: PipelineState) -> PipelineState:
             print(f"📦 state.style = {state.get('style')}")
             print(f"📦 vision_result = {vision_result}")
 
-            if True:
-                selected_style = auto_match_style(
-                    vision_tags=vision_result.get("style_tags", []),
-                    category=vision_result.get("category", "")
-                )
-                print(f"🎨 스타일 자동 선택: {selected_style}")
-            else:
-                selected_style = state["style"]
-                print(f"🎨 사용자 선택 스타일: {selected_style}")
+            selected_style = state["style"]
+            print(f"✅ 선택된 K-Fashion 컨셉: {selected_style}")
 
             print(f"✅ 최종 선택 스타일: {selected_style}")
             print("=" * 50)
@@ -395,6 +408,7 @@ async def node_generate_html(state: PipelineState) -> PipelineState:
                 image_url=state["background_image_url"],
                 template_name=selected_style,
                 caption=state["caption"],
+                ad_inputs=state.get("ad_inputs")
             )
 
             state["html_content"] = result["html"]
