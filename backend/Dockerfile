@@ -1,22 +1,29 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# 시스템 의존성
+# 시스템 의존성 설치
 RUN apt-get update && apt-get install -y \
-    libpq-dev gcc curl \
+    gcc \
+    g++ \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 의존성 설치
+# Python 의존성 복사 및 설치
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Playwright (Node 7: HTML→PNG)
-RUN playwright install chromium --with-deps
-
-# 앱 복사
+# 애플리케이션 코드 복사
 COPY . .
 
-EXPOSE 8000
+# 포트 설정
+ENV PORT=8080
+EXPOSE 8080
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 헬스체크
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8080/health')"
+
+# 서버 실행
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
