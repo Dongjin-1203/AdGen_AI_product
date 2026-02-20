@@ -7,7 +7,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: adgen-pipeline-backend
+  SERVICE_NAME: adgen-backend
   REGION: asia-northeast3
   REPOSITORY: adgen-repo
 
