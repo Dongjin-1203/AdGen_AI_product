@@ -3,13 +3,13 @@ name: Backend Deploy
 on:
   push:
     branches: [main]
-    paths: ['backend/**']
+    paths: ['backend/**', '.github/workflows/backend.yml']
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE_NAME: adgen-pipeline-backend
   REGION: asia-northeast3
-  REPOSITORY: adgen-repo  # ⭐ 수정!
+  REPOSITORY: adgen-repo
 
 jobs:
   deploy:
@@ -26,7 +26,7 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build & Push to Artifact Registry
+      - name: Build & Push
         run: |
           gcloud builds submit ./backend \
             --tag asia-northeast3-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME \
@@ -39,27 +39,13 @@ jobs:
             --region $REGION \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "ENVIRONMENT=production" \
-            --set-env-vars "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@/${{ secrets.DB_NAME }}?host=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }}" \
-            --set-env-vars "CLOUD_SQL_CONNECTION_NAME=${{ secrets.CLOUD_SQL_CONNECTION_NAME }}" \
-            --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
-            --set-env-vars "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}" \
-            --set-env-vars "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" \
-            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
-            --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" \
-            --set-env-vars "GOOGLE_MODEL_API_KEY=${{ secrets.GOOGLE_MODEL_API_KEY }}" \
-            --set-env-vars "REPLICATE_API_TOKEN=${{ secrets.REPLICATE_API_TOKEN }}" \
-            --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+            --set-env-vars "ENVIRONMENT=production,DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@/${{ secrets.DB_NAME }}?host=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},CLOUD_SQL_CONNECTION_NAME=${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_NAME=${{ secrets.DB_NAME }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},GOOGLE_MODEL_API_KEY=${{ secrets.GOOGLE_MODEL_API_KEY }},REPLICATE_API_TOKEN=${{ secrets.REPLICATE_API_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
             --add-cloudsql-instances "${{ secrets.CLOUD_SQL_CONNECTION_NAME }}" \
             --memory 2Gi \
             --cpu 2 \
             --timeout 600 \
-            --concurrency 10 \
-            --max-instances 3 \
-            --min-instances 0
+            --max-instances 3
 
-      - name: Show service URL
+      - name: Show URL
         run: |
-          echo "Backend deployed to:"
           gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)'
