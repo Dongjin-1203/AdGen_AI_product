@@ -27,8 +27,16 @@ def _render_html_to_png_sync(html_content: str, width: int = 1080, height: int =
         PNG 이미지 바이트
     """
     try:
-        # html2image 인스턴스 생성
-        hti = Html2Image(size=(width, height))
+        # ⭐ Chrome 경로 설정 (환경 변수에서 가져오기)
+        chrome_path = os.getenv('CHROME_BIN', '/usr/bin/chromium')
+        logger.info(f"🔍 Chrome 경로: {chrome_path}")
+        
+        # html2image 인스턴스 생성 (Chrome 경로 명시)
+        hti = Html2Image(
+            size=(width, height),
+            browser_executable=chrome_path,  # ⭐ 명시적 경로 지정
+            custom_flags=['--no-sandbox', '--disable-dev-shm-usage']  # ⭐ Cloud Run용 플래그
+        )
         
         # 임시 디렉토리에 렌더링
         with tempfile.TemporaryDirectory() as tmpdir:
