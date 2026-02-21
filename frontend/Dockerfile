@@ -26,6 +26,11 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# ⭐ sharp 설치를 위한 빌드 도구 및 sharp 설치
+RUN apk add --no-cache \
+    libc6-compat \
+    && npm install -g sharp
+
 # 보안: non-root 유저 생성
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -35,6 +40,9 @@ COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# ⭐ sharp 복사 (standalone 모드에서 필요)
+COPY --from=builder /app/node_modules/sharp ./node_modules/sharp
 
 # non-root 유저로 전환
 USER nextjs

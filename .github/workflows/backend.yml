@@ -56,7 +56,7 @@ jobs:
             --cpu 4 \
             --timeout 600 \
             --max-instances 10 \
-            --min-instances 0
+            --min-instances 1
 
       - name: Show service URL
         run: |
