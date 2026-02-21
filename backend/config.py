@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     USE_GPU_SERVER: bool = True  # ← 추가: GPU 서버 사용 여부
 
     # ===== CORS ===== 
-    ALLOWED_ORIGINS: str = '["http://localhost:3000", "https://adgen-backend-613605394208.asia-northeast3.run.app"]'
+    ALLOWED_ORIGINS: str = '["http://localhost:3000", "https://adgen-frontend-613605394208.asia-northeast3.run.app"]'
     
     @property
     def CLOUD_SQL_URL(self) -> str:
