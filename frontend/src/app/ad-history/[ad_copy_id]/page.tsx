@@ -126,9 +126,9 @@ export default function AdCopyDetailPage() {
   // 템플릿 한글 이름
   const getTemplateName = (template: string) => {
     const names: { [key: string]: string } = {
-      minimal: 'Minimal - 미니멀한 디자인',
-      bold: 'Bold - 강렬한 디자인',
-      vintage: 'Vintage - 빈티지 디자인',
+      resort: 'resort - 여유로운 분위기의 디자인',
+      retro: 'retro - Y2K 레트로 디자인',
+      romantic: 'romantic - 로맨틱한 디자인',
     };
     return names[template] || template;
   };
@@ -327,7 +327,7 @@ export default function AdCopyDetailPage() {
               <div className="text-2xl">🤖</div>
               <div>
                 <div className="text-sm text-gray-500">AI 모델</div>
-                <div className="text-lg font-semibold text-gray-900">GPT-4 Turbo</div>
+                <div className="text-lg font-semibold text-gray-900">GPT-5-chat-latest</div>
               </div>
             </div>
 

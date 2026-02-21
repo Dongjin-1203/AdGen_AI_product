@@ -26,9 +26,9 @@ interface AdCopyHistoryItem {
 interface Statistics {
   total_count: number;
   template_counts: {
-    minimal?: number;
-    bold?: number;
-    vintage?: number;
+    resort?: number;
+    retro?: number;
+    romantic?: number;
   };
   recent_7days_count: number;
   average_per_day: number;
@@ -184,32 +184,61 @@ export default function AdCopyHistoryPage() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* 통계 카드 */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg border">
-              <div className="text-sm text-gray-500">총 생성 개수</div>
-              <div className="text-2xl font-bold text-gray-900 mt-1">
-                {statistics.total_count}
+          <>
+            {/* 메인 통계 (항상 3칸) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* 총 생성 개수 */}
+              <div className="bg-white p-4 rounded-lg border">
+                <div className="text-sm text-gray-500">총 생성 개수</div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">
+                  {statistics.total_count}
+                </div>
+              </div>
+              
+              {/* 최근 7일 */}
+              <div className="bg-white p-4 rounded-lg border">
+                <div className="text-sm text-gray-500">최근 7일</div>
+                <div className="text-2xl font-bold text-blue-600 mt-1">
+                  {statistics.recent_7days_count}
+                </div>
+              </div>
+              
+              {/* 일평균 생성 */}
+              <div className="bg-white p-4 rounded-lg border">
+                <div className="text-sm text-gray-500">일평균 생성</div>
+                <div className="text-2xl font-bold text-green-600 mt-1">
+                  {statistics.average_per_day}
+                </div>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg border">
-              <div className="text-sm text-gray-500">최근 7일</div>
-              <div className="text-2xl font-bold text-blue-600 mt-1">
-                {statistics.recent_7days_count}
+            
+            {/* 템플릿별 통계 (항상 3칸) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Resort */}
+              <div className="bg-white p-4 rounded-lg border border-purple-200 hover:border-purple-400 transition">
+                <div className="text-sm text-purple-600 font-medium">🏖️ Resort</div>
+                <div className="text-2xl font-bold text-purple-600 mt-1">
+                  {statistics.template_counts.resort || 0}
+                </div>
+              </div>
+              
+              {/* Retro */}
+              <div className="bg-white p-4 rounded-lg border border-pink-200 hover:border-pink-400 transition">
+                <div className="text-sm text-pink-600 font-medium">✨ Retro</div>
+                <div className="text-2xl font-bold text-pink-600 mt-1">
+                  {statistics.template_counts.retro || 0}
+                </div>
+              </div>
+              
+              {/* Romantic */}
+              <div className="bg-white p-4 rounded-lg border border-rose-200 hover:border-rose-400 transition">
+                <div className="text-sm text-rose-600 font-medium">🌸 Romantic</div>
+                <div className="text-2xl font-bold text-rose-600 mt-1">
+                  {statistics.template_counts.romantic || 0}
+                </div>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg border">
-              <div className="text-sm text-gray-500">일평균 생성</div>
-              <div className="text-2xl font-bold text-green-600 mt-1">
-                {statistics.average_per_day}
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border">
-              <div className="text-sm text-gray-500">Minimal 템플릿</div>
-              <div className="text-2xl font-bold text-purple-600 mt-1">
-                {statistics.template_counts.minimal || 0}
-              </div>
-            </div>
-          </div>
+          </>
         )}
 
         {/* 필터 */}
@@ -229,16 +258,44 @@ export default function AdCopyHistoryPage() {
           </button>
           <button
             onClick={() => {
-              setSelectedTemplate('minimal');
+              setSelectedTemplate('resort');
               setPage(1);
             }}
             className={`px-4 py-2 rounded-lg ${
-              selectedTemplate === 'minimal'
+              selectedTemplate === 'resort'
                 ? 'bg-purple-600 text-white'
                 : 'bg-white text-gray-700 border hover:bg-gray-50'
             }`}
           >
-            Minimal
+           🏖️ Resort
+          </button>
+
+          <button
+            onClick={() => {
+              setSelectedTemplate('retro');
+              setPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg ${
+              selectedTemplate === 'retro'
+                ? 'bg-purple-600 text-white'
+                : 'bg-white text-gray-700 border hover:bg-gray-50'
+            }`}
+          >
+            ✨ Retro
+          </button>
+
+          <button
+            onClick={() => {
+              setSelectedTemplate('romantic');
+              setPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg ${
+              selectedTemplate === 'romantic'
+                ? 'bg-purple-600 text-white'
+                : 'bg-white text-gray-700 border hover:bg-gray-50'
+            }`}
+          >
+            🌸 Romantic
           </button>
         </div>
 
