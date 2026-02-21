@@ -26,11 +26,12 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build & Push
+      - name: Build & Push to Artifact Registry
         run: |
           gcloud builds submit ./backend \
             --tag asia-northeast3-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME \
-            --timeout=20m
+            --timeout=20m \
+            --no-stream
 
       - name: Deploy to Cloud Run
         run: |
@@ -46,6 +47,6 @@ jobs:
             --timeout 600 \
             --max-instances 3
 
-      - name: Show URL
+      - name: Show service URL
         run: |
           gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)'
