@@ -8,6 +8,10 @@ console.log('🔍 API_URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 180000,  // ⭐ 180초 (3분) 추가!
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use((config) => {
