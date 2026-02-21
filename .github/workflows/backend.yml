@@ -31,7 +31,6 @@ jobs:
           gcloud builds submit ./backend \
             --tag asia-northeast3-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME \
             --timeout=20m \
-            --no-stream
 
       - name: Deploy to Cloud Run
         run: |
