@@ -10,6 +10,7 @@ env:
   SERVICE_NAME: adgen-backend
   REGION: asia-northeast3
   REPOSITORY: adgen-repo
+  IMAGE_NAME: adgen-backend
 
 jobs:
   deploy:
@@ -26,17 +27,27 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build & Push to Artifact Registry
+      - name: Configure Docker for Artifact Registry
         run: |
-          gcloud builds submit ./backend \
-            --tag asia-northeast3-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME \
-            --timeout=20m \
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest \
+            ./backend
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy $SERVICE_NAME \
-            --image asia-northeast3-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$SERVICE_NAME \
-            --region $REGION \
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest \
+            --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars "ENVIRONMENT=production,DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@/${{ secrets.DB_NAME }}?host=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},CLOUD_SQL_CONNECTION_NAME=${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_NAME=${{ secrets.DB_NAME }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},GOOGLE_MODEL_API_KEY=${{ secrets.GOOGLE_MODEL_API_KEY }},REPLICATE_API_TOKEN=${{ secrets.REPLICATE_API_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
@@ -44,8 +55,10 @@ jobs:
             --memory 2Gi \
             --cpu 2 \
             --timeout 600 \
-            --max-instances 3
+            --max-instances 10 \
+            --min-instances 0
 
       - name: Show service URL
         run: |
-          gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)'
+          echo "Backend deployed to:"
+          gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)'
