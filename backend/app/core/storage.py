@@ -1,6 +1,6 @@
 """
 GCS Storage Helper Functions
-업데이트: download_from_gcs, upload_to_gcs 추가
+업데이트: download_from_gcs, upload_to_gcs, upload_to_gcs_async 추가
 """
 
 from google.cloud import storage
@@ -67,7 +67,7 @@ def upload_to_gcs(
     bucket_name: Optional[str] = None
 ) -> str:
     """
-    GCS에 파일 업로드
+    GCS에 파일 업로드 (동기)
     
     Args:
         file_data: 업로드할 파일 데이터
@@ -97,3 +97,32 @@ def upload_to_gcs(
     except Exception as e:
         logger.error(f"Error uploading to GCS: {e}", exc_info=True)
         raise
+
+
+async def upload_to_gcs_async(
+    file_data: bytes,
+    destination_path: str,
+    content_type: str = "image/jpeg",
+    bucket_name: Optional[str] = None
+) -> str:
+    """
+    GCS에 파일 업로드 (비동기)
+    
+    async 함수에서 호출 시 blocking 방지를 위해 사용
+    
+    Args:
+        file_data: 업로드할 파일 데이터
+        destination_path: GCS 경로 (예: ai_generated/xxx.jpg)
+        content_type: 파일 타입
+        bucket_name: 버킷명 (기본값: settings.GCS_BUCKET_NAME)
+    
+    Returns:
+        공개 URL (https://storage.googleapis.com/...)
+    """
+    import asyncio
+    
+    def _upload():
+        return upload_to_gcs(file_data, destination_path, content_type, bucket_name)
+    
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _upload)
