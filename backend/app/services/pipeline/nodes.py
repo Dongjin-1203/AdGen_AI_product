@@ -441,28 +441,51 @@ async def node_save_image(state: PipelineState) -> PipelineState:
     """Node 7: HTML → PNG 이미지 저장 (Playwright)"""
     async def _execute(state: PipelineState) -> PipelineState:
         from app.core.html_renderer import render_html_to_png
-        from app.core.storage import upload_to_gcs_async  
+        from app.core.storage import upload_to_gcs_async   
         import uuid as _uuid
         from app.db.base import SessionLocal
         from app.models.caption_system import AdCopyHistory
 
+        # ⭐ 디버깅 로그 1
+        logger.info("🔵 [DEBUG] save_image 실행 시작")
+        logger.info(f"🔵 [DEBUG] HTML content length: {len(state.get('html_content', ''))}")
+
         # HTML → PNG
-        image_bytes = await render_html_to_png(state["html_content"], 1080, 1080)
+        try:
+            logger.info("🔵 [DEBUG] render_html_to_png 호출 시작")
+            image_bytes = await render_html_to_png(state["html_content"], 1080, 1080)
+            logger.info(f"🔵 [DEBUG] render_html_to_png 완료: {len(image_bytes) if image_bytes else 0} bytes")
+        except Exception as e:
+            logger.error(f"🔴 [ERROR] render_html_to_png 실패: {e}", exc_info=True)
+            raise
+
+        if not image_bytes:
+            raise Exception("PNG 렌더링 결과가 비어있습니다!")
 
         # GCS 업로드
         filename = f"ad_minimal_{_uuid.uuid4()}.png"
         destination_path = f"{state['user_id']}/ads/{filename}"
 
-        image_url = await upload_to_gcs_async(
-            file_data=image_bytes,
-            destination_path=destination_path,
-            content_type='image/png'
-        )
+        logger.info(f"🔵 [DEBUG] GCS 업로드 준비: {destination_path}")
+        logger.info(f"🔵 [DEBUG] 이미지 크기: {len(image_bytes)} bytes")
+
+        try:
+            logger.info("🔵 [DEBUG] upload_to_gcs_async 호출 시작")
+            image_url = await upload_to_gcs_async(
+                file_data=image_bytes,
+                destination_path=destination_path,
+                content_type='image/png'
+            )
+            logger.info(f"🔵 [DEBUG] upload_to_gcs_async 완료: {image_url}")
+        except Exception as e:
+            logger.error(f"🔴 [ERROR] upload_to_gcs_async 실패: {e}", exc_info=True)
+            raise
 
         state["final_image_url"] = image_url
         state["steps"]["save_image"]["result_url"] = image_url
 
         # AdCopyHistory 업데이트
+        logger.info("🔵 [DEBUG] DB 업데이트 시작")
         db = SessionLocal()
         try:
             ad_copy = db.query(AdCopyHistory).filter(
@@ -471,9 +494,13 @@ async def node_save_image(state: PipelineState) -> PipelineState:
             if ad_copy:
                 ad_copy.final_image_url = image_url
                 db.commit()
+                logger.info("🔵 [DEBUG] DB 업데이트 완료")
+        except Exception as e:
+            logger.error(f"🔴 [ERROR] DB 업데이트 실패: {e}", exc_info=True)
         finally:
             db.close()
 
+        logger.info("🔵 [DEBUG] save_image 완료!")
         return state
 
     return await _run_node(state, 7, _execute)
