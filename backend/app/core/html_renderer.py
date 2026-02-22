@@ -31,16 +31,15 @@ def _render_html_to_png_sync(html_content: str, width: int = 1080, height: int =
         chrome_path = os.getenv('CHROME_BIN', '/usr/bin/chromium')
         logger.info(f"🔍 Chrome 경로: {chrome_path}")
         
-        # html2image 인스턴스 생성 (Chrome 경로 명시)
-        hti = Html2Image(
-            size=(width, height),
-            browser_executable=chrome_path,  # ⭐ 명시적 경로 지정
-            custom_flags=['--no-sandbox', '--disable-dev-shm-usage']  # ⭐ Cloud Run용 플래그
-        )
-        
         # 임시 디렉토리에 렌더링
         with tempfile.TemporaryDirectory() as tmpdir:
-            output_file = os.path.join(tmpdir, 'temp.png')
+            # html2image 인스턴스 생성 (출력 경로를 tmpdir로 지정!)
+            hti = Html2Image(
+                size=(width, height),
+                browser_executable=chrome_path,
+                output_path=tmpdir,  # ⭐ 출력 경로 명시!
+                custom_flags=['--no-sandbox', '--disable-dev-shm-usage']
+            )
             
             # HTML → PNG 변환
             hti.screenshot(
@@ -49,8 +48,8 @@ def _render_html_to_png_sync(html_content: str, width: int = 1080, height: int =
                 size=(width, height)
             )
             
-            # PNG 읽기
-            png_path = os.path.join(hti.output_path, 'temp.png')
+            # PNG 읽기 (이제 올바른 경로)
+            png_path = os.path.join(tmpdir, 'temp.png')
             
             with Image.open(png_path) as img:
                 # RGB로 변환 (투명도 제거)
@@ -71,7 +70,7 @@ def _render_html_to_png_sync(html_content: str, width: int = 1080, height: int =
         return png_bytes
         
     except Exception as e:
-        logger.error(f"❌ HTML rendering failed: {e}")
+        logger.error(f"❌ HTML rendering failed: {e}", exc_info=True)
         raise Exception(f"HTML 렌더링 실패: {str(e)}")
 
 
