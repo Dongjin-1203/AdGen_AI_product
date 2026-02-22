@@ -150,7 +150,7 @@ async def node_remove_background(state: PipelineState) -> PipelineState:
         import requests
         from PIL import Image
         from app.services.img_processing.background_removal import BackgroundRemovalService
-        from app.core.storage import upload_to_gcs
+        from app.core.storage import upload_to_gcs_async
 
         # 이미지 다운로드
         resp = requests.get(state["product_image_url"], timeout=30)
@@ -164,7 +164,7 @@ async def node_remove_background(state: PipelineState) -> PipelineState:
         # GCS 업로드
         buf = io.BytesIO()
         removed.save(buf, format="PNG")
-        result_url = upload_to_gcs(
+        result_url = await upload_to_gcs_async(
             file_data=buf.getvalue(),
             destination_path=f"pipeline/{state['job_id']}/removed_bg.png",
             content_type="image/png"
@@ -184,7 +184,7 @@ async def node_virtual_fitting(state: PipelineState) -> PipelineState:
         import requests
         from PIL import Image
         from app.services.generation.vton_replicate_generator import get_vton_service
-        from app.core.storage import upload_to_gcs
+        from app.core.storage import upload_to_gcs_async
 
         # 배경 제거 이미지 로드
         resp = requests.get(state["removed_bg_url"], timeout=30)
@@ -203,7 +203,7 @@ async def node_virtual_fitting(state: PipelineState) -> PipelineState:
         # GCS 업로드
         buf = io.BytesIO()
         result_image.save(buf, format="PNG")
-        result_url = upload_to_gcs(
+        result_url = await upload_to_gcs_async(
             file_data=buf.getvalue(),
             destination_path=f"pipeline/{state['job_id']}/fitted.png",
             content_type="image/png"
@@ -223,7 +223,7 @@ async def node_generate_background(state: PipelineState) -> PipelineState:
         import requests
         from PIL import Image
         from app.services.generation.gemini_generator import GeminiImageGenerator  # ← 변경
-        from app.core.storage import upload_to_gcs
+        from app.core.storage import upload_to_gcs_async
 
         resp = requests.get(state["fitted_image_url"], timeout=30)
         resp.raise_for_status()
@@ -239,7 +239,7 @@ async def node_generate_background(state: PipelineState) -> PipelineState:
 
         buf = io.BytesIO()
         result_image.save(buf, format="PNG")
-        result_url = upload_to_gcs(
+        result_url = await upload_to_gcs_async(
             file_data=buf.getvalue(),
             destination_path=f"pipeline/{state['job_id']}/background.png",
             content_type="image/png"
@@ -441,7 +441,7 @@ async def node_save_image(state: PipelineState) -> PipelineState:
     """Node 7: HTML → PNG 이미지 저장 (Playwright)"""
     async def _execute(state: PipelineState) -> PipelineState:
         from app.core.html_renderer import render_html_to_png
-        from app.core.storage import upload_to_gcs   
+        from app.core.storage import upload_to_gcs_async  
         import uuid as _uuid
         from app.db.base import SessionLocal
         from app.models.caption_system import AdCopyHistory
@@ -453,7 +453,7 @@ async def node_save_image(state: PipelineState) -> PipelineState:
         filename = f"ad_minimal_{_uuid.uuid4()}.png"
         destination_path = f"{state['user_id']}/ads/{filename}"
 
-        image_url = upload_to_gcs(
+        image_url = await upload_to_gcs_async(
             file_data=image_bytes,
             destination_path=destination_path,
             content_type='image/png'
