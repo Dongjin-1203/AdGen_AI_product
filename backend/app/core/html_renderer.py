@@ -91,5 +91,5 @@ async def render_html_to_png(html_content: str, width: int = 1080, height: int =
         PNG 이미지 바이트
     """
     import asyncio
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _render_html_to_png_sync, html_content, width, height)
