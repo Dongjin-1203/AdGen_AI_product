@@ -124,5 +124,5 @@ async def upload_to_gcs_async(
     def _upload():
         return upload_to_gcs(file_data, destination_path, content_type, bucket_name)
     
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _upload)
