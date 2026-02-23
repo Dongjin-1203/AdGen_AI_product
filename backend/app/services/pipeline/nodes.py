@@ -39,18 +39,9 @@ async def _run_node(
     step_num: int,
     execute_fn: Callable,
 ) -> PipelineState:
-    """
-    공통 노드 실행 로직
-    1. pre_check
-    2. 상태 업데이트 (running)
-    3. execute_fn 실행
-    4. post_check
-    5. 상태 업데이트 (success/failed)
-    6. WebSocket 전송
-    """
     step_name = STEP_NAMES[step_num]
 
-    # 1. pre_check
+    # pre_check
     pre_check = PRE_CHECKS.get(step_name)
     if pre_check:
         ok, err = pre_check(state)
@@ -65,19 +56,23 @@ async def _run_node(
             logger.error(f"[Node {step_num}] pre_check 실패: {err}")
             return state
 
-    # 2. 실행 중 상태
+    # 실행 중 상태
     state["current_step"] = step_num
     state["status"] = "running"
     state["steps"][step_name]["status"] = "running"
     state["steps"][step_name]["started_at"] = _now()
     state["updated_at"] = _now()
     await _broadcast(state["job_id"], state)
-    logger.info(f"[Node {step_num}] {step_name} 시작")
 
-    # 3. 실행
+    # ⭐ 시작 시간 기록
+    import time
+    start_time = time.time()
+    logger.info(f"[Node {step_num}] ▶ {step_name} 시작")
+
     try:
         state = await execute_fn(state)
     except Exception as e:
+        elapsed = time.time() - start_time
         err = str(e)
         state["steps"][step_name]["status"] = "failed"
         state["steps"][step_name]["error"] = err
@@ -87,14 +82,15 @@ async def _run_node(
         state["error_step"] = step_num
         state["updated_at"] = _now()
         await _broadcast(state["job_id"], state)
-        logger.error(f"[Node {step_num}] {step_name} 실행 오류: {e}", exc_info=True)
+        logger.error(f"[Node {step_num}] ✗ {step_name} 실패 ({elapsed:.1f}s): {e}", exc_info=True)
         return state
 
-    # 4. post_check
+    # post_check
     post_check = POST_CHECKS.get(step_name)
     if post_check:
         ok, err = post_check(state)
         if not ok:
+            elapsed = time.time() - start_time
             state["steps"][step_name]["status"] = "failed"
             state["steps"][step_name]["error"] = err
             state["steps"][step_name]["completed_at"] = _now()
@@ -103,17 +99,17 @@ async def _run_node(
             state["error_step"] = step_num
             state["updated_at"] = _now()
             await _broadcast(state["job_id"], state)
-            logger.error(f"[Node {step_num}] post_check 실패: {err}")
+            logger.error(f"[Node {step_num}] ✗ {step_name} post_check 실패 ({elapsed:.1f}s): {err}")
             return state
 
-    # 5. 성공
+    # 성공
+    elapsed = time.time() - start_time
     state["steps"][step_name]["status"] = "success"
     state["steps"][step_name]["completed_at"] = _now()
     state["updated_at"] = _now()
     await _broadcast(state["job_id"], state)
-    logger.info(f"[Node {step_num}] {step_name} 완료")
+    logger.info(f"[Node {step_num}] ✓ {step_name} 완료 ({elapsed:.1f}s)")  # ⭐
     return state
-
 
 # ===== 각 노드 구현 =====
 
