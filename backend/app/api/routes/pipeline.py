@@ -141,7 +141,7 @@ async def run_pipeline(
     _pipeline_states[job_id] = initial_state
 
     # 백그라운드 실행
-    asyncio.create_task(_run_pipeline, job_id, initial_state)
+    asyncio.create_task(_run_pipeline(job_id, initial_state))
 
     logger.info(f"[Pipeline] 시작: job_id={job_id}, content_id={request.content_id}")
 
