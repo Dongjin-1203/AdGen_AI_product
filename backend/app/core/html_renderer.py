@@ -74,4 +74,4 @@ async def render_html_to_png(html_content: str, width: int = 1080, height: int =
     """
     import asyncio
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _render_html_to_png_sync, html_content, width, height)
+    return await loop.run_in_executor(None, render_html_to_png, html_content, width, height)
