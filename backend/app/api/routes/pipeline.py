@@ -8,7 +8,7 @@ import uuid
 import asyncio
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -98,7 +98,6 @@ async def _run_pipeline(job_id: str, initial_state: PipelineState):
 @router.post("/pipeline/run", response_model=PipelineRunResponse)
 async def run_pipeline(
     request: PipelineRunRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -142,7 +141,7 @@ async def run_pipeline(
     _pipeline_states[job_id] = initial_state
 
     # 백그라운드 실행
-    background_tasks.add_task(_run_pipeline, job_id, initial_state)
+    asyncio.create_task(_run_pipeline, job_id, initial_state)
 
     logger.info(f"[Pipeline] 시작: job_id={job_id}, content_id={request.content_id}")
 
