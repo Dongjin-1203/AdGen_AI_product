@@ -13,46 +13,38 @@ logger = logging.getLogger(__name__)
 
 
 def _render_html_to_png_sync(html_content: str, width: int = 1080, height: int = 1080) -> bytes:
-    """
-    HTML을 PNG 이미지로 변환 (동기 함수 - 내부용)
-    
-    Windows 호환성을 위해 html2image 사용
-    
-    Args:
-        html_content: HTML 문자열
-        width: 이미지 너비
-        height: 이미지 높이
-    
-    Returns:
-        PNG 이미지 바이트
-    """
     try:
-        # ⭐ Chrome 경로 설정 (환경 변수에서 가져오기)
         chrome_path = os.getenv('CHROME_BIN', '/usr/bin/chromium')
         logger.info(f"🔍 Chrome 경로: {chrome_path}")
         
-        # 임시 디렉토리에 렌더링
         with tempfile.TemporaryDirectory() as tmpdir:
-            # html2image 인스턴스 생성 (출력 경로를 tmpdir로 지정!)
             hti = Html2Image(
                 size=(width, height),
                 browser_executable=chrome_path,
-                output_path=tmpdir,  # ⭐ 출력 경로 명시!
-                custom_flags=['--no-sandbox', '--disable-dev-shm-usage']
+                output_path=tmpdir,
+                custom_flags=[
+                    '--headless=new',           # ⭐ 핵심 - 헤드리스 모드
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',            # ⭐ GPU 없는 환경 대응
+                    '--disable-setuid-sandbox',
+                    '--single-process',         # ⭐ Cloud Run 단일 프로세스
+                    '--no-zygote',              # ⭐ zygote 프로세스 비활성화
+                ]
             )
             
-            # HTML → PNG 변환
             hti.screenshot(
                 html_str=html_content,
                 save_as='temp.png',
                 size=(width, height)
             )
             
-            # PNG 읽기 (이제 올바른 경로)
             png_path = os.path.join(tmpdir, 'temp.png')
             
+            if not os.path.exists(png_path):
+                raise Exception(f"PNG 파일 생성 실패: {png_path}")
+            
             with Image.open(png_path) as img:
-                # RGB로 변환 (투명도 제거)
                 if img.mode in ('RGBA', 'LA', 'P'):
                     background = Image.new('RGB', img.size, (255, 255, 255))
                     if img.mode == 'P':
@@ -60,7 +52,6 @@ def _render_html_to_png_sync(html_content: str, width: int = 1080, height: int =
                     background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                     img = background
                 
-                # bytes로 변환
                 img_byte_arr = io.BytesIO()
                 img.save(img_byte_arr, format='PNG')
                 img_byte_arr.seek(0)
