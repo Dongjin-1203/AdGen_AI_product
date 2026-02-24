@@ -70,7 +70,7 @@ export default function UploadPage() {
       if (productName) formData.append('product_name', productName);
       if (price) formData.append('price', price);
 
-      const response = await fetch(`${API_URL}/api/v1/${uploadedContentId}`, {
+      const response = await fetch(`${API_URL}/api/v1/contents/${uploadedContentId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
