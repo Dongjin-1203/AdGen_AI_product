@@ -25,7 +25,7 @@ app.add_middleware(
 
 # 기존 라우터
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
-app.include_router(contents.router, prefix="/api/v1", tags=["contents"])
+app.include_router(contents.router, prefix="/api/v1/contents", tags=["contents"])
 app.include_router(history.router, prefix="/api/v1", tags=["history"])
 
 # 🆕 파이프라인 라우터 (REST + WebSocket 포함)

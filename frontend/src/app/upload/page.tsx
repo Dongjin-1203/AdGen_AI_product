@@ -144,7 +144,7 @@ export default function UploadPage() {
         console.log('🎯 카테고리 전달:', selectedCategory);
       }
 
-      const response = await fetch(`${API_URL}/api/v1/upload`, {
+      const response = await fetch(`${API_URL}/api/v1/contents/${uploadedContentId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

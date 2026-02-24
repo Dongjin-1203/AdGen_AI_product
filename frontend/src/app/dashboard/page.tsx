@@ -97,7 +97,7 @@ export default function DashboardPage() {
 
   const fetchContents = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1`, {
+      const response = await fetch(`${API_URL}/api/v1/contents`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (response.ok) {
