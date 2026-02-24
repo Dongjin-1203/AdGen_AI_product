@@ -10,11 +10,13 @@ from sqlalchemy.orm import Session
 from typing import List
 import zipfile
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import math
 
 from app.db.base import get_db
 from app.models.schemas import GenerationHistory, UserContent, User
 from app.api.routes.auth import get_current_user
+from app.models.caption_system import AdCopyHistory
 
 router = APIRouter()
 
@@ -44,6 +46,43 @@ class HistoryResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class AdCopyDataSchema(BaseModel):
+    headline: str
+    discount: str | None = None
+    period: str | None = None
+    brand: str | None = None
+
+class AdCopyHistoryItem(BaseModel):
+    ad_copy_id: str
+    template_used: str
+    ad_copy_data: AdCopyDataSchema
+    final_image_url: str | None
+    created_at: datetime
+    product_name: str | None = None
+    category: str | None = None
+    model_image_url: str | None = None
+
+    class Config:
+        from_attributes = True
+
+class AdCopyHistoryResponse(BaseModel):
+    results: list[AdCopyHistoryItem]
+    total_pages: int
+
+class AdCopyStatistics(BaseModel):
+    total_count: int
+    template_counts: dict
+    recent_7days_count: int
+    average_per_day: float
+
+class AdCopyDetail(BaseModel):
+    ad_copy_id: str
+    template_used: str
+    ad_copy_data: AdCopyDataSchema
+    html_content: str | None
+    final_image_url: str | None
+    created_at: datetime
+    processing_time: float | None
 
 # ===== API 엔드포인트 =====
 
@@ -357,4 +396,162 @@ async def preview_vton_result(
         headers={
             "Content-Disposition": "inline"  # 다운로드 대신 표시
         }
+    )
+
+@router.get("/ad-copy-history", response_model=AdCopyHistoryResponse)
+async def get_ad_copy_history(
+    page: int = 1,
+    limit: int = 12,
+    template: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(AdCopyHistory, UserContent.product_name, UserContent.category).join(
+        UserContent, AdCopyHistory.content_id == UserContent.content_id
+    ).filter(AdCopyHistory.user_id == current_user.user_id)
+
+    if template:
+        query = query.filter(AdCopyHistory.template_used == template)
+
+    total_count = query.count()
+    total_pages = max(1, math.ceil(total_count / limit))
+    offset = (page - 1) * limit
+    rows = query.order_by(AdCopyHistory.created_at.desc()).limit(limit).offset(offset).all()
+
+    results = []
+    for ad_copy, product_name, category in rows:
+        raw = ad_copy.ad_copy_data or {}
+        results.append(AdCopyHistoryItem(
+            ad_copy_id=ad_copy.ad_copy_id,
+            template_used=ad_copy.template_used,
+            ad_copy_data=AdCopyDataSchema(
+                headline=raw.get("headline", ""),
+                discount=raw.get("discount"),
+                period=raw.get("period"),
+                brand=raw.get("brand"),
+            ),
+            final_image_url=ad_copy.final_image_url,
+            created_at=ad_copy.created_at,
+            product_name=product_name,
+            category=category,
+        ))
+
+    return AdCopyHistoryResponse(results=results, total_pages=total_pages)
+
+
+@router.get("/ad-copy-statistics", response_model=AdCopyStatistics)
+async def get_ad_copy_statistics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from sqlalchemy import func as sa_func
+
+    base_query = db.query(AdCopyHistory).filter(
+        AdCopyHistory.user_id == current_user.user_id
+    )
+    total_count = base_query.count()
+
+    template_rows = db.query(
+        AdCopyHistory.template_used,
+        sa_func.count(AdCopyHistory.ad_copy_id)
+    ).filter(
+        AdCopyHistory.user_id == current_user.user_id
+    ).group_by(AdCopyHistory.template_used).all()
+
+    template_counts = {style: cnt for style, cnt in template_rows}
+
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    recent_7days_count = base_query.filter(
+        AdCopyHistory.created_at >= seven_days_ago
+    ).count()
+
+    if total_count > 0:
+        first = base_query.order_by(AdCopyHistory.created_at.asc()).first()
+        days_since = max(1, (datetime.now(timezone.utc) - first.created_at).days + 1)
+        average_per_day = round(total_count / days_since, 1)
+    else:
+        average_per_day = 0.0
+
+    return AdCopyStatistics(
+        total_count=total_count,
+        template_counts=template_counts,
+        recent_7days_count=recent_7days_count,
+        average_per_day=average_per_day,
+    )
+
+
+@router.get("/ad-copy-history/{ad_copy_id}", response_model=AdCopyDetail)
+async def get_ad_copy_detail(
+    ad_copy_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ad_copy = db.query(AdCopyHistory).filter(
+        AdCopyHistory.ad_copy_id == ad_copy_id,
+        AdCopyHistory.user_id == current_user.user_id
+    ).first()
+
+    if not ad_copy:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    raw = ad_copy.ad_copy_data or {}
+    return AdCopyDetail(
+        ad_copy_id=ad_copy.ad_copy_id,
+        template_used=ad_copy.template_used,
+        ad_copy_data=AdCopyDataSchema(
+            headline=raw.get("headline", ""),
+            discount=raw.get("discount"),
+            period=raw.get("period"),
+            brand=raw.get("brand"),
+        ),
+        html_content=ad_copy.html_content,
+        final_image_url=ad_copy.final_image_url,
+        created_at=ad_copy.created_at,
+        processing_time=float(ad_copy.processing_time) if ad_copy.processing_time else None,
+    )
+
+
+@router.delete("/ad-copy-history/{ad_copy_id}")
+async def delete_ad_copy(
+    ad_copy_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ad_copy = db.query(AdCopyHistory).filter(
+        AdCopyHistory.ad_copy_id == ad_copy_id,
+        AdCopyHistory.user_id == current_user.user_id
+    ).first()
+
+    if not ad_copy:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    db.delete(ad_copy)
+    db.commit()
+    return {"success": True, "ad_copy_id": ad_copy_id}
+
+
+@router.get("/ad-copy-history/{ad_copy_id}/download")
+async def download_ad_copy_image(
+    ad_copy_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ad_copy = db.query(AdCopyHistory).filter(
+        AdCopyHistory.ad_copy_id == ad_copy_id,
+        AdCopyHistory.user_id == current_user.user_id
+    ).first()
+
+    if not ad_copy or not ad_copy.final_image_url:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    try:
+        image_bytes = download_from_gcs(ad_copy.final_image_url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"이미지 다운로드 실패: {str(e)}")
+
+    filename = f"ad_{ad_copy.template_used}_{ad_copy_id[:8]}.png"
+    return Response(
+        content=image_bytes,
+        media_type="image/png",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
