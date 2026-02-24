@@ -243,6 +243,7 @@ export default function DashboardPage() {
 
   // ===== WebSocket 연결 =====
   const connectWebSocket = (jobId: string) => {
+    const baseUrl = API_URL.replace(/\/$/, '');
     const wsUrl = API_URL.replace('http://', 'ws://').replace('https://', 'wss://');
     const ws = new WebSocket(`${wsUrl}/api/v1/ws/pipeline/${jobId}`);
   
