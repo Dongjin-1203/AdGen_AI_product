@@ -11,8 +11,7 @@ import StyleSelector from './components/StyleSelector';
 import GenerateButton from './components/GenerateButton';
 import StepCard from './components/StepCard';
 import AdInputForm from './components/AdInputForm';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_URL } from '@/lib/api';
 
 export default function DashboardPage() {
   const router = useRouter();

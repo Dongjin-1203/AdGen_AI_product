@@ -6,7 +6,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000
 
 console.log('🔍 API_URL:', API_URL);
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   timeout: 180000,  // ⭐ 180초 (3분) 추가!
   headers: {
@@ -48,8 +48,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-export { api };
 
 export const authAPI = {
   signup: (data: SignupRequest) => api.post<User>('/api/v1/signup', data),
