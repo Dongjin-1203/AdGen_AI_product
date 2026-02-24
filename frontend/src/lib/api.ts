@@ -2,7 +2,7 @@ import axios from 'axios';
 import { User, SignupRequest, Token, Content, History } from '@/types';
 
 // 백엔드 환경변수 지정
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 console.log('🔍 API_URL:', API_URL);
 
