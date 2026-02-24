@@ -301,7 +301,9 @@ export default function AdCopyDetailPage() {
               <div className="text-2xl">⏱️</div>
               <div>
                 <div className="text-sm text-gray-500">처리 시간</div>
-                <div className="text-lg font-semibold text-gray-900">{adCopy.processing_time.toFixed(1)}초</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {adCopy.processing_time != null ? adCopy.processing_time.toFixed(1) : '-'}초
+                </div>
               </div>
             </div>
 
