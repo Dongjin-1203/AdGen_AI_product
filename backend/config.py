@@ -47,6 +47,13 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = '["http://localhost:3000", "https://adgen-frontend-613605394208.asia-northeast3.run.app"]'
     
     @property
+    def allowed_origins_list(self) -> List[str]:
+        try:
+            return json.loads(self.ALLOWED_ORIGINS)
+        except:
+            return ["http://localhost:3000"]
+
+    @property
     def CLOUD_SQL_URL(self) -> str:
         """Cloud SQL 또는 로컬 DB URL 반환"""
         if self.ENVIRONMENT == "production" and self.CLOUD_SQL_CONNECTION_NAME:
